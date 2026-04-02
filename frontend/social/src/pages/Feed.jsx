@@ -7,7 +7,6 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
-import Lottie from 'lottie-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import InfiniteScroll from 'react-infinite-scroll-component'
@@ -30,7 +29,6 @@ function Feed() {
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(true)
   const [vibeRefreshSignal, setVibeRefreshSignal] = useState(0)
-  const [emptyAnimation, setEmptyAnimation] = useState(null)
 
   const loadPosts = async (targetPage = 1, append = false) => {
     try {
@@ -66,13 +64,6 @@ function Feed() {
     loadPosts(1, false)
   }, [])
 
-  useEffect(() => {
-    fetch('https://assets2.lottiefiles.com/packages/lf20_ysrn2v.json')
-      .then((response) => response.json())
-      .then((data) => setEmptyAnimation(data))
-      .catch(() => setEmptyAnimation(null))
-  }, [])
-
   const fetchMore = () => {
     if (!hasMore) return
     loadPosts(page + 1, true)
@@ -84,6 +75,10 @@ function Feed() {
 
   const prependPost = (newPost) => {
     setPosts((prev) => [newPost, ...prev])
+  }
+
+  const removePost = (postId) => {
+    setPosts((prev) => prev.filter((item) => item.id !== postId))
   }
 
   return (
@@ -132,13 +127,7 @@ function Feed() {
               bgcolor: isLight ? 'rgba(61,45,181,0.03)' : 'transparent',
             }}
           >
-            {emptyAnimation ? (
-              <Box sx={{ width: 210, mx: 'auto', mb: 1 }}>
-                <Lottie animationData={emptyAnimation} loop autoplay />
-              </Box>
-            ) : (
-              <DynamicFeedRoundedIcon sx={{ fontSize: 42, color: 'primary.main', mb: 1 }} />
-            )}
+            <DynamicFeedRoundedIcon sx={{ fontSize: 42, color: 'primary.main', mb: 1 }} />
             <Typography variant="h6" sx={{ color: isLight ? '#3D2DB5' : '#fff' }}>
               No posts yet. Be the first to share!
             </Typography>
@@ -186,7 +175,7 @@ function Feed() {
                     },
                   }}
                 >
-                  <PostCard post={post} onChange={updatePost} />
+                  <PostCard post={post} onChange={updatePost} onDelete={removePost} />
                 </Box>
               ))}
             </Stack>

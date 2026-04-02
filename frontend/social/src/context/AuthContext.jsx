@@ -1,31 +1,44 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
-import useLocalStorage from '../hooks/useLocalStorage'
-
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useLocalStorage('user', null)
-  const [token, setTokenState] = useState(() => localStorage.getItem('token'))
+  const [user, setUser] = useState(() => {
+    try {
+      const sessionUser = window.sessionStorage.getItem('user')
+      if (sessionUser) return JSON.parse(sessionUser)
+      const legacyUser = window.localStorage.getItem('user')
+      return legacyUser ? JSON.parse(legacyUser) : null
+    } catch {
+      return null
+    }
+  })
+  const [token, setTokenState] = useState(() => window.sessionStorage.getItem('token') || window.localStorage.getItem('token'))
 
   const login = useCallback((userData, authToken) => {
     setUser(userData)
     setTokenState(authToken)
-    localStorage.setItem('token', authToken)
-  }, [setUser])
+    window.sessionStorage.setItem('user', JSON.stringify(userData))
+    window.sessionStorage.setItem('token', authToken)
+    window.localStorage.removeItem('user')
+    window.localStorage.removeItem('token')
+  }, [])
 
   const updateUser = useCallback((userData) => {
     setUser(userData)
-  }, [setUser])
+    window.sessionStorage.setItem('user', JSON.stringify(userData))
+  }, [])
 
   const logout = useCallback(() => {
     setUser(null)
     setTokenState(null)
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
+    window.sessionStorage.removeItem('user')
+    window.sessionStorage.removeItem('token')
+    window.localStorage.removeItem('user')
+    window.localStorage.removeItem('token')
     window.location.href = '/login'
-  }, [setUser])
+  }, [])
 
   const value = useMemo(
     () => ({

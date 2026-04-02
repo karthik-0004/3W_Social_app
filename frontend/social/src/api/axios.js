@@ -6,7 +6,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = window.sessionStorage.getItem('token') || window.localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -24,8 +24,10 @@ api.interceptors.response.use(
     const isAuthEndpoint = requestUrl.includes('/api/auth/login/') || requestUrl.includes('/api/auth/register/')
 
     if (status === 401 && !skipAuthRedirect && !isAuthEndpoint) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      window.sessionStorage.removeItem('token')
+      window.sessionStorage.removeItem('user')
+      window.localStorage.removeItem('token')
+      window.localStorage.removeItem('user')
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
@@ -65,6 +67,11 @@ export const likePost = async (id) => {
 
 export const commentPost = async (id, text) => {
   const response = await api.post(`/api/posts/${id}/comment/`, { text })
+  return response.data
+}
+
+export const deletePost = async (id) => {
+  const response = await api.delete(`/api/posts/${id}/delete/`)
   return response.data
 }
 

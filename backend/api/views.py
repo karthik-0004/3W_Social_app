@@ -248,6 +248,24 @@ class CommentPostView(APIView):
 		)
 
 
+class DeletePostView(APIView):
+	permission_classes = [permissions.IsAuthenticated]
+
+	def delete(self, request, pk):
+		try:
+			post = Post.objects.get(pk=pk)
+		except Post.DoesNotExist:
+			return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		if post.user_id != request.user.id:
+			return Response({'error': 'Only the owner can delete this post'}, status=status.HTTP_403_FORBIDDEN)
+
+		if post.image:
+			post.image.delete(save=False)
+		post.delete()
+		return Response({'status': 'deleted'}, status=status.HTTP_200_OK)
+
+
 class UserProfileView(APIView):
 	permission_classes = [permissions.IsAuthenticated]
 	parser_classes = [JSONParser, MultiPartParser, FormParser]

@@ -1,4 +1,5 @@
 import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded'
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded'
 import FavoriteBorderRoundedIcon from '@mui/icons-material/FavoriteBorderRounded'
 import SendRoundedIcon from '@mui/icons-material/SendRounded'
@@ -24,11 +25,11 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { useInView } from 'react-intersection-observer'
 
-import { commentPost, getFeedVibes, likePost } from '../api/axios'
+import { commentPost, deletePost, getFeedVibes, likePost } from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import VibeViewerModal from './VibeViewerModal'
 
-function PostCard({ post, onChange }) {
+function PostCard({ post, onChange, onDelete }) {
   const theme = useTheme()
   const isLight = theme.palette.mode === 'light'
   const { user, isAuthenticated } = useAuth()
@@ -54,6 +55,7 @@ function PostCard({ post, onChange }) {
   const profileId = localPost.user_id || localPost.user?.id
   const profilePic = localPost.user_profile_pic || localPost.user?.profile_pic || ''
   const hasActiveVibe = Boolean(localPost.user_has_active_vibe)
+  const canDeletePost = Boolean(user?.id && profileId && String(user.id) === String(profileId))
 
   const likedByCurrentUser = useMemo(() => {
     if (!user?.username) return false
@@ -160,6 +162,20 @@ function PostCard({ post, onChange }) {
     }
   }
 
+  const handleDeletePost = async () => {
+    if (!canDeletePost) return
+    const confirmed = window.confirm('Delete this post? This cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      await deletePost(localPost.id)
+      onDelete?.(localPost.id)
+      toast.success('Post deleted.')
+    } catch {
+      toast.error('Failed to delete post.')
+    }
+  }
+
   const openProfileOrVibe = async () => {
     if (!profileId) return
 
@@ -256,13 +272,20 @@ function PostCard({ post, onChange }) {
               </Avatar>
             </Box>
             <Box>
-              <Typography
-                variant="subtitle2"
-                sx={{ fontWeight: 700, color: isLight ? '#1A1035' : '#fff', cursor: profileId ? 'pointer' : 'default' }}
-                onClick={() => profileId && navigate(`/profile/${profileId}`)}
-              >
-                {username}
-              </Typography>
+              <Stack direction="row" spacing={0.6} alignItems="center">
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 700, color: isLight ? '#1A1035' : '#fff', cursor: profileId ? 'pointer' : 'default' }}
+                  onClick={() => profileId && navigate(`/profile/${profileId}`)}
+                >
+                  {username}
+                </Typography>
+                {canDeletePost && (
+                  <IconButton size="small" onClick={handleDeletePost} sx={{ color: '#FF6B6B' }}>
+                    <DeleteOutlineRoundedIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Stack>
               <Typography variant="caption" sx={{ color: isLight ? '#9898B3' : 'text.secondary' }}>
                 {localPost.created_at
                   ? formatDistanceToNow(new Date(localPost.created_at), { addSuffix: true })

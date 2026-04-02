@@ -204,6 +204,11 @@ export default function UserProfilePage() {
     toast.success('Post created successfully!')
   }
 
+  const onPostDeleted = (postId) => {
+    setPosts((prev) => prev.filter((item) => item.id !== postId))
+    setSelectedPost((prev) => (prev && prev.id === postId ? null : prev))
+  }
+
   const renderActions = () => {
     const status = profile?.friendship_status || 'none'
 
@@ -608,7 +613,7 @@ export default function UserProfilePage() {
 
       <Dialog open={Boolean(selectedPost)} onClose={() => setSelectedPost(null)} maxWidth="md" fullWidth>
         <Box sx={{ p: 2 }}>
-          {selectedPost && <PostCard post={selectedPost} onChange={setSelectedPost} />}
+          {selectedPost && <PostCard post={selectedPost} onChange={setSelectedPost} onDelete={onPostDeleted} />}
         </Box>
       </Dialog>
 
