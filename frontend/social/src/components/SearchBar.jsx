@@ -5,7 +5,6 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import {
   Avatar,
   Box,
-  Button,
   Chip,
   ClickAwayListener,
   Paper,
@@ -13,7 +12,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
@@ -25,6 +24,8 @@ import {
   sendFriendRequest,
   unfriend,
 } from '../api/axios'
+import useDebounce from '../hooks/useDebounce'
+import GlowButton from './GlowButton'
 
 export default function SearchBar() {
   const navigate = useNavigate()
@@ -33,25 +34,24 @@ export default function SearchBar() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [friendshipState, setFriendshipState] = useState({})
-  const debounceRef = useRef(null)
-
   const normalizedQuery = useMemo(() => query.trim(), [query])
+  const debouncedQuery = useDebounce(normalizedQuery, 400)
 
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-
-    if (!normalizedQuery) {
+    if (!debouncedQuery) {
       setResults([])
       setOpen(false)
       return
     }
 
-    debounceRef.current = setTimeout(async () => {
+    let isActive = true
+
+    const runSearch = async () => {
       setLoading(true)
       try {
-        const data = await searchUsers(normalizedQuery)
+        const data = await searchUsers(debouncedQuery)
+        if (!isActive) return
+
         setResults(data)
         setFriendshipState(
           data.reduce((acc, item) => {
@@ -66,14 +66,16 @@ export default function SearchBar() {
       } catch {
         toast.error('Search failed. Please try again.')
       } finally {
-        setLoading(false)
+        if (isActive) setLoading(false)
       }
-    }, 400)
+    }
+
+    runSearch()
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
+      isActive = false
     }
-  }, [normalizedQuery])
+  }, [debouncedQuery])
 
   const updateUserStatus = (userId, status, requestId = null) => {
     setFriendshipState((prev) => ({ ...prev, [userId]: { status, requestId } }))
@@ -165,42 +167,40 @@ export default function SearchBar() {
 
     if (status === 'none') {
       return (
-        <Button
+        <GlowButton
           size="small"
-          variant="contained"
-          startIcon={<PersonAddAlt1RoundedIcon fontSize="small" />}
+          variant="primary"
+          icon={<PersonAddAlt1RoundedIcon fontSize="small" />}
           onClick={() => onSendRequest(item.id)}
-          sx={{
-            background: 'linear-gradient(135deg, #A78BFA, #F472B6)',
-          }}
+          sx={{ px: 1.4, py: 0.5 }}
         >
           Add Friend
-        </Button>
+        </GlowButton>
       )
     }
 
     if (status === 'request_sent') {
       return (
-        <Button size="small" variant="outlined" color="inherit" startIcon={<HourglassEmptyRoundedIcon fontSize="small" />} onClick={() => onCancelRequest(item.id)}>
+        <GlowButton size="small" variant="secondary" icon={<HourglassEmptyRoundedIcon fontSize="small" />} onClick={() => onCancelRequest(item.id)}>
           Request Sent
-        </Button>
+        </GlowButton>
       )
     }
 
     if (status === 'request_received') {
       return (
         <Stack direction="row" spacing={0.7}>
-          <Button
+          <GlowButton
             size="small"
-            variant="contained"
+            variant="primary"
             onClick={() => onAcceptRequest(item.id, requestId)}
             sx={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
           >
             Accept
-          </Button>
-          <Button size="small" variant="outlined" color="error" onClick={() => onRejectRequest(item.id, requestId)}>
+          </GlowButton>
+          <GlowButton size="small" variant="danger" onClick={() => onRejectRequest(item.id, requestId)}>
             Decline
-          </Button>
+          </GlowButton>
         </Stack>
       )
     }

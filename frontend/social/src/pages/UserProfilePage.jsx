@@ -1,6 +1,7 @@
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import MessageRoundedIcon from '@mui/icons-material/MessageRounded'
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Avatar,
   Box,
@@ -18,6 +19,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useInView } from 'react-intersection-observer'
 
 import {
   acceptFriendRequest,
@@ -28,9 +30,11 @@ import {
   sendFriendRequest,
   unfriend,
 } from '../api/axios'
+import GlowButton from '../components/GlowButton'
 import PostCard from '../components/PostCard'
 import VibeViewerModal from '../components/VibeViewerModal'
 import { useAuth } from '../context/AuthContext'
+import useCountUp from '../hooks/useCountUp'
 
 const TAB_MAP = {
   posts: 0,
@@ -54,10 +58,14 @@ export default function UserProfilePage() {
 
   const tabName = searchParams.get('tab') || 'posts'
   const tabValue = TAB_MAP[tabName] ?? 0
+  const { ref: gridRef, inView: gridInView } = useInView({ triggerOnce: true, rootMargin: '-40px' })
 
   const isOwnProfile = useMemo(() => String(user?.id) === String(userId), [user?.id, userId])
   const activeVibes = useMemo(() => vibes.filter((item) => !item.is_expired), [vibes])
   const hasActiveVibes = activeVibes.length > 0
+  const postsCount = useCountUp(posts.length, 900)
+  const friendsCount = useCountUp(profile?.friends_count || 0, 900)
+  const vibesCount = useCountUp(activeVibes.length, 900)
 
   const loadProfile = async () => {
     setLoading(true)
@@ -190,18 +198,18 @@ export default function UserProfilePage() {
 
     if (status === 'self' || isOwnProfile) {
       return (
-        <Button variant="outlined" onClick={() => navigate('/profile/edit')}>
+        <GlowButton variant="secondary" onClick={() => navigate('/profile/edit')}>
           Edit Profile
-        </Button>
+        </GlowButton>
       )
     }
 
     if (status === 'friends') {
       return (
         <Stack direction="row" spacing={1}>
-          <Button variant="outlined" startIcon={<MessageRoundedIcon />} onClick={() => navigate(`/chat/${userId}`)}>
+          <GlowButton variant="secondary" icon={<MessageRoundedIcon />} onClick={() => navigate(`/chat/${userId}`)}>
             Message
-          </Button>
+          </GlowButton>
           <Chip label="Friends ✓" color="success" onClick={onUnfriend} sx={{ cursor: 'pointer' }} />
         </Stack>
       )
@@ -209,34 +217,33 @@ export default function UserProfilePage() {
 
     if (status === 'request_sent') {
       return (
-        <Button variant="outlined" color="inherit" onClick={onCancelRequest}>
+        <GlowButton variant="secondary" onClick={onCancelRequest}>
           Request Sent
-        </Button>
+        </GlowButton>
       )
     }
 
     if (status === 'request_received') {
       return (
         <Stack direction="row" spacing={1}>
-          <Button variant="contained" onClick={onAcceptRequest} sx={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}>
+          <GlowButton variant="primary" onClick={onAcceptRequest} sx={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}>
             Accept
-          </Button>
-          <Button variant="outlined" color="error" onClick={onDeclineRequest}>
+          </GlowButton>
+          <GlowButton variant="danger" onClick={onDeclineRequest}>
             Decline
-          </Button>
+          </GlowButton>
         </Stack>
       )
     }
 
     return (
-      <Button
-        variant="contained"
-        startIcon={<PersonAddAlt1RoundedIcon />}
+      <GlowButton
+        variant="primary"
+        icon={<PersonAddAlt1RoundedIcon />}
         onClick={onSendRequest}
-        sx={{ background: 'linear-gradient(135deg, #A78BFA, #F472B6)' }}
       >
         Add Friend
-      </Button>
+      </GlowButton>
     )
   }
 
@@ -249,7 +256,15 @@ export default function UserProfilePage() {
         </Stack>
       ) : (
         <>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ mb: 2.2 }}>
+          <Stack
+            component={motion.div}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={3}
+            sx={{ mb: 2.2, willChange: 'transform' }}
+          >
             <Box
               onClick={() => hasActiveVibes && openVibeViewer()}
               sx={{
@@ -274,9 +289,9 @@ export default function UserProfilePage() {
 
             <Box sx={{ flex: 1 }}>
               <Stack direction="row" spacing={3} sx={{ mb: 1.2 }}>
-                <Typography><strong>{posts.length}</strong> Posts</Typography>
-                <Typography><strong>{profile?.friends_count || 0}</strong> Friends</Typography>
-                <Typography><strong>{activeVibes.length}</strong> Vibes</Typography>
+                <Typography><strong>{postsCount}</strong> Posts</Typography>
+                <Typography><strong>{friendsCount}</strong> Friends</Typography>
+                <Typography><strong>{vibesCount}</strong> Vibes</Typography>
               </Stack>
 
               <Typography sx={{ fontWeight: 800, color: '#fff', mb: 0.4 }}>{profile?.username}</Typography>
@@ -303,16 +318,27 @@ export default function UserProfilePage() {
             <Tab label="Tagged" />
           </Tabs>
 
-          {tabValue === 0 && (
+          <AnimatePresence mode="wait">
+            {tabValue === 0 && (
             <Box
+              key="posts"
+              component={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              ref={gridRef}
               sx={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 gap: 1,
               }}
             >
-              {posts.map((post) => (
+              {posts.map((post, index) => (
                 <Box
+                  component={motion.div}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={gridInView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ delay: index * 0.05 }}
                   key={post.id}
                   onClick={() => setSelectedPost(post)}
                   sx={{
@@ -370,6 +396,11 @@ export default function UserProfilePage() {
 
           {tabValue === 1 && (
             <Box
+              key="vibes"
+              component={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
               sx={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -422,9 +453,9 @@ export default function UserProfilePage() {
                   )}
 
                   {isOwnProfile && (
-                    <Button
+                    <GlowButton
                       size="small"
-                      color="error"
+                      variant="danger"
                       onClick={(event) => {
                         event.stopPropagation()
                         onDeleteVibe(vibe.id)
@@ -439,7 +470,7 @@ export default function UserProfilePage() {
                       }}
                     >
                       <DeleteOutlineRoundedIcon fontSize="small" />
-                    </Button>
+                    </GlowButton>
                   )}
                 </Box>
               ))}
@@ -448,6 +479,11 @@ export default function UserProfilePage() {
 
           {tabValue === 2 && (
             <Box
+              key="tagged"
+              component={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
               sx={{
                 border: '1px dashed rgba(255,255,255,0.2)',
                 borderRadius: 2,
@@ -458,6 +494,7 @@ export default function UserProfilePage() {
               <Typography sx={{ color: '#fff', fontWeight: 700 }}>Tagged posts coming soon</Typography>
             </Box>
           )}
+          </AnimatePresence>
         </>
       )}
 

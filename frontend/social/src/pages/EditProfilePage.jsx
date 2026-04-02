@@ -2,7 +2,6 @@ import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded'
 import {
   Avatar,
   Box,
-  Button,
   Card,
   Container,
   Stack,
@@ -14,6 +13,7 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 
 import { fetchProfile, updateProfile } from '../api/axios'
+import GlowButton from '../components/GlowButton'
 import { useAuth } from '../context/AuthContext'
 
 const BIO_LIMIT = 150
@@ -110,10 +110,10 @@ export default function EditProfilePage() {
                 </Avatar>
               </Box>
 
-              <Button component="label" variant="outlined" startIcon={<PhotoCameraRoundedIcon />}>
+              <GlowButton component="label" variant="secondary" icon={<PhotoCameraRoundedIcon />}>
                 Upload Avatar
                 <input hidden type="file" accept="image/*" onChange={onAvatarChange} />
-              </Button>
+              </GlowButton>
             </Stack>
 
             <TextField
@@ -141,20 +141,16 @@ export default function EditProfilePage() {
             </Typography>
 
             <Stack direction="row" spacing={1.2} justifyContent="flex-end">
-              <Button color="inherit" onClick={() => navigate(`/profile/${user?.id}`)}>
+              <GlowButton variant="ghost" onClick={() => navigate(`/profile/${user?.id}`)}>
                 Cancel
-              </Button>
-              <Button
+              </GlowButton>
+              <GlowButton
                 onClick={onSave}
                 disabled={saving}
-                sx={{
-                  color: '#fff',
-                  fontWeight: 700,
-                  background: 'linear-gradient(135deg, #A78BFA, #F472B6)',
-                }}
+                variant="primary"
               >
                 {saving ? 'Saving...' : 'Save'}
-              </Button>
+              </GlowButton>
             </Stack>
           </Stack>
         )}

@@ -1,5 +1,6 @@
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import RemoveRedEyeRoundedIcon from '@mui/icons-material/RemoveRedEyeRounded'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Avatar,
   Box,
@@ -24,6 +25,8 @@ export default function VibeViewerModal({
   const vibes = useMemo(() => vibeGroup?.vibes || [], [vibeGroup])
   const [index, setIndex] = useState(0)
   const [progressSeed, setProgressSeed] = useState(0)
+  const [direction, setDirection] = useState(1)
+  const [floatingEmoji, setFloatingEmoji] = useState(null)
   const touchStartX = useRef(null)
 
   const currentVibe = vibes[index]
@@ -57,6 +60,7 @@ export default function VibeViewerModal({
 
   const goNext = () => {
     if (index < vibes.length - 1) {
+      setDirection(1)
       setIndex((value) => value + 1)
     } else {
       onClose?.()
@@ -65,8 +69,14 @@ export default function VibeViewerModal({
 
   const goPrev = () => {
     if (index > 0) {
+      setDirection(-1)
       setIndex((value) => value - 1)
     }
+  }
+
+  const reactWithEmoji = (emoji) => {
+    setFloatingEmoji({ id: Date.now(), emoji })
+    window.setTimeout(() => setFloatingEmoji(null), 900)
   }
 
   const onTouchStart = (event) => {
@@ -87,6 +97,10 @@ export default function VibeViewerModal({
   return (
     <Dialog open={open} onClose={onClose} fullScreen>
       <Box
+        component={motion.div}
+        initial={{ opacity: 0, scale: 1.1 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
         sx={{
           height: '100%',
           bgcolor: '#000',
@@ -116,17 +130,20 @@ export default function VibeViewerModal({
                 >
                   <Box
                     key={`${item.id}-${progressSeed}`}
+                    component={motion.div}
                     sx={{
                       width: isPast ? '100%' : isActive ? '100%' : '0%',
                       height: '100%',
                       bgcolor: '#fff',
                       transformOrigin: 'left center',
-                      animation: isActive ? `vibeFill ${VIBE_DURATION_MS}ms linear` : 'none',
-                      '@keyframes vibeFill': {
-                        from: { transform: 'scaleX(0)' },
-                        to: { transform: 'scaleX(1)' },
-                      },
+                      ...(isActive
+                        ? {
+                            animation: 'none',
+                          }
+                        : {}),
                     }}
+                    animate={isActive ? { width: '100%' } : {}}
+                    transition={isActive ? { duration: 5, ease: 'linear' } : {}}
                   />
                 </Box>
               )
@@ -164,39 +181,63 @@ export default function VibeViewerModal({
             justifyContent: 'center',
           }}
         >
-          {currentVibe?.media_type === 'image' && currentVibe?.media && (
-            <Box component="img" src={currentVibe.media} alt="Vibe" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          )}
-
-          {currentVibe?.media_type === 'video' && currentVibe?.media && (
+          <AnimatePresence mode="wait" custom={direction}>
             <Box
-              component="video"
-              src={currentVibe.media}
-              autoPlay
-              muted
-              loop
-              playsInline
-              sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
-          )}
-
-          {currentVibe?.media_type === 'note' && (
-            <Box
-              sx={{
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(135deg, #A78BFA, #F472B6, #FBBF24)',
-                display: 'grid',
-                placeItems: 'center',
-                px: 3,
-                textAlign: 'center',
-              }}
+              key={currentVibe?.id || 'none'}
+              component={motion.div}
+              custom={direction}
+              initial={{ x: direction > 0 ? 120 : -120, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: direction > 0 ? -120 : 120, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              sx={{ width: '100%', height: '100%' }}
             >
-              <Typography sx={{ fontSize: { xs: 28, md: 42 }, fontWeight: 800, textShadow: '0 6px 24px rgba(0,0,0,0.3)' }}>
-                {currentVibe?.note || 'Daily vibe'}
-              </Typography>
+              {currentVibe?.media_type === 'image' && currentVibe?.media && (
+                <Box component="img" src={currentVibe.media} alt="Vibe" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              )}
+
+              {currentVibe?.media_type === 'video' && currentVibe?.media && (
+                <Box
+                  component="video"
+                  src={currentVibe.media}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              )}
+
+              {currentVibe?.media_type === 'note' && (
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(135deg, #7C3AED, #EC4899, #06B6D4)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    px: 3,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {(currentVibe?.note || 'Daily vibe').split(' ').map((word, idx) => (
+                      <Typography
+                        key={`${word}-${idx}`}
+                        component={motion.span}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        sx={{ fontSize: { xs: 28, md: 42 }, fontWeight: 800, textShadow: '0 6px 24px rgba(0,0,0,0.3)' }}
+                      >
+                        {word}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
             </Box>
-          )}
+          </AnimatePresence>
         </Box>
 
         {currentVibe?.note && currentVibe?.media_type !== 'note' && (
@@ -244,6 +285,39 @@ export default function VibeViewerModal({
             <Typography variant="body2">{currentVibe?.viewer_count || 0}</Typography>
           </Stack>
         )}
+
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 4, bgcolor: 'rgba(0,0,0,0.35)', borderRadius: 999, p: 0.6 }}
+        >
+          {['❤️', '🔥', '😂', '😍', '👏', '😮'].map((emoji) => (
+            <Box
+              key={emoji}
+              component={motion.div}
+              whileHover={{ y: -8, scale: 1.3 }}
+              sx={{ cursor: 'pointer', fontSize: 20 }}
+              onClick={() => reactWithEmoji(emoji)}
+            >
+              {emoji}
+            </Box>
+          ))}
+        </Stack>
+
+        <AnimatePresence>
+          {floatingEmoji && (
+            <Box
+              component={motion.div}
+              key={floatingEmoji.id}
+              initial={{ y: 0, opacity: 1, scale: 1 }}
+              animate={{ y: -400, opacity: 0, scale: 2 }}
+              exit={{ opacity: 0 }}
+              sx={{ position: 'absolute', left: '50%', bottom: 70, transform: 'translateX(-50%)', fontSize: 30, zIndex: 5 }}
+            >
+              {floatingEmoji.emoji}
+            </Box>
+          )}
+        </AnimatePresence>
       </Box>
     </Dialog>
   )

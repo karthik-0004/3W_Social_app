@@ -1,6 +1,7 @@
 import { Box, useMediaQuery } from '@mui/material'
 import { Outlet } from 'react-router-dom'
 
+import AnimatedBackground from './AnimatedBackground'
 import MobileNav from './MobileNav'
 import SearchBar from './SearchBar'
 import Sidebar from './Sidebar'
@@ -10,6 +11,7 @@ export default function Layout() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <AnimatedBackground />
       {!isMobile && <Sidebar />}
       <Box
         sx={{

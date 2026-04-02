@@ -1,30 +1,26 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 
+import useLocalStorage from '../hooks/useLocalStorage'
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user')
-    return saved ? JSON.parse(saved) : null
-  })
-
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
+  const [user, setUser] = useLocalStorage('user', null)
+  const [token, setTokenState] = useState(() => localStorage.getItem('token'))
 
   const login = (userData, authToken) => {
     setUser(userData)
-    setToken(authToken)
-    localStorage.setItem('user', JSON.stringify(userData))
+    setTokenState(authToken)
     localStorage.setItem('token', authToken)
   }
 
   const updateUser = (userData) => {
     setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
   }
 
   const logout = () => {
     setUser(null)
-    setToken(null)
+    setTokenState(null)
     localStorage.removeItem('user')
     localStorage.removeItem('token')
     window.location.href = '/login'

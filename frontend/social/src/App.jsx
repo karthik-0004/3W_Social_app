@@ -1,8 +1,10 @@
 import { CssBaseline, ThemeProvider } from '@mui/material'
+import { AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import Layout from './components/Layout'
+import PageTransition from './components/PageTransition'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import ChatConversation from './pages/ChatConversation'
@@ -14,6 +16,80 @@ import NotificationsPage from './pages/NotificationsPage'
 import Register from './pages/Register'
 import UserProfilePage from './pages/UserProfilePage'
 import theme from './theme/theme'
+
+function AppRoutes() {
+  const location = useLocation()
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/login"
+          element={
+            <PageTransition>
+              <Login />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PageTransition>
+              <Register />
+            </PageTransition>
+          }
+        />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route
+              path="/"
+              element={
+                <PageTransition>
+                  <Feed />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/feed"
+              element={
+                <PageTransition>
+                  <Feed />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <PageTransition>
+                  <ChatPage />
+                </PageTransition>
+              }
+            />
+            <Route path="/chat/:userId" element={<ChatConversation />} />
+            <Route
+              path="/notifications"
+              element={
+                <PageTransition>
+                  <NotificationsPage />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/profile/:userId"
+              element={
+                <PageTransition>
+                  <UserProfilePage />
+                </PageTransition>
+              }
+            />
+            <Route path="/profile/edit" element={<EditProfilePage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </AnimatePresence>
+  )
+}
 
 export default function App() {
   return (
@@ -32,22 +108,7 @@ export default function App() {
               },
             }}
           />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Feed />} />
-                <Route path="/feed" element={<Feed />} />
-                <Route path="/chat" element={<ChatPage />} />
-                <Route path="/chat/:userId" element={<ChatConversation />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/profile/:userId" element={<UserProfilePage />} />
-                <Route path="/profile/edit" element={<EditProfilePage />} />
-              </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+          <AppRoutes />
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

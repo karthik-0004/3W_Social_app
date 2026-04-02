@@ -7,7 +7,21 @@ import {
 
 function PostSkeletonItem() {
   return (
-    <Card sx={{ borderRadius: 3 }}>
+    <Card
+      sx={{
+        borderRadius: 3,
+        '& .MuiSkeleton-root': {
+          background:
+            'linear-gradient(90deg, #0F1623 25%, #161E2E 50%, #0F1623 75%)',
+          backgroundSize: '800px 100%',
+          animation: 'shimmer 1.8s linear infinite',
+        },
+        '@keyframes shimmer': {
+          from: { backgroundPosition: '-400px 0' },
+          to: { backgroundPosition: '400px 0' },
+        },
+      }}
+    >
       <CardContent>
         <Stack spacing={2}>
           <Stack direction="row" spacing={1.5} alignItems="center">

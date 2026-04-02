@@ -1,12 +1,13 @@
 import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded'
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded'
-import { Avatar, Box, Button, Card, Container, Stack, Typography } from '@mui/material'
+import { Avatar, Box, Card, Container, Stack, Typography } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { acceptFriendRequest, getNotifications, getPendingRequests, rejectFriendRequest } from '../api/axios'
+import GlowButton from '../components/GlowButton'
 
 const textByType = {
   follow: 'followed you',
@@ -100,17 +101,17 @@ export default function NotificationsPage() {
                   </Typography>
                 </Stack>
                 <Stack direction="row" spacing={0.8}>
-                  <Button
+                  <GlowButton
                     size="small"
-                    variant="contained"
+                    variant="primary"
                     onClick={() => handleAccept(requestItem)}
                     sx={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
                   >
                     Accept
-                  </Button>
-                  <Button size="small" variant="outlined" color="error" onClick={() => handleDecline(requestItem)}>
+                  </GlowButton>
+                  <GlowButton size="small" variant="danger" onClick={() => handleDecline(requestItem)}>
                     Decline
-                  </Button>
+                  </GlowButton>
                 </Stack>
               </Stack>
             ))}

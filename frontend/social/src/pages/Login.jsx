@@ -1,11 +1,11 @@
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
+import confetti from 'canvas-confetti'
+import { motion } from 'framer-motion'
 import {
   Box,
-  Button,
   Card,
   CardContent,
-  CircularProgress,
   InputAdornment,
   Link,
   Stack,
@@ -13,13 +13,27 @@ import {
   Typography,
 } from '@mui/material'
 import { useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 
 import { loginUser } from '../api/axios'
+import AnimatedBackground from '../components/AnimatedBackground'
+import GlowButton from '../components/GlowButton'
 import { useAuth } from '../context/AuthContext'
 
-function Login() {
+const MotionCard = motion(Card)
+
+const letterContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+}
+
+const letterItem = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 },
+}
+
+export default function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [formData, setFormData] = useState({ email: '', password: '' })
@@ -36,94 +50,54 @@ function Login() {
     try {
       const response = await loginUser(formData)
       login(response.user, response.access)
+      confetti({ particleCount: 80, spread: 70, colors: ['#7C3AED', '#EC4899', '#06B6D4'] })
       toast.success('Welcome back!')
       navigate('/feed', { replace: true })
-    } catch (error) {
-      const detail = error?.response?.data?.non_field_errors?.[0] || error?.response?.data?.detail || ''
-
-      if (typeof detail === 'string' && detail.toLowerCase().includes('please register first')) {
-        toast.error('No account found. Please register first.')
-      } else {
-        toast.error('Login failed. Check your credentials.')
-      }
+    } catch {
+      toast.error('Login failed. Check your credentials.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', px: 2 }}>
-      <Box
-        sx={{
-          position: 'absolute',
-          width: 400,
-          height: 400,
-          borderRadius: '50%',
-          filter: 'blur(80px)',
-          opacity: 0.4,
-          background: '#A78BFA',
-          top: -120,
-          left: -100,
-          animation: 'float1 14s ease-in-out infinite',
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          width: 400,
-          height: 400,
-          borderRadius: '50%',
-          filter: 'blur(80px)',
-          opacity: 0.4,
-          background: '#F472B6',
-          top: -80,
-          right: -120,
-          animation: 'float2 16s ease-in-out infinite',
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          width: 400,
-          height: 400,
-          borderRadius: '50%',
-          filter: 'blur(80px)',
-          opacity: 0.4,
-          background: '#60A5FA',
-          bottom: -180,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          animation: 'float1 18s ease-in-out infinite',
-        }}
-      />
+    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2, position: 'relative' }}>
+      <AnimatedBackground />
 
-      <Card
+      <MotionCard
+        initial={{ opacity: 0, scale: 0.9, y: 40 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 110, damping: 14 }}
         sx={{
-          position: 'relative',
-          zIndex: 1,
           width: '100%',
           maxWidth: 520,
           p: { xs: 1.2, md: 2 },
-          borderRadius: 3,
-          background: 'rgba(13,17,23,0.8)',
-          backdropFilter: 'blur(40px)',
-          border: '1px solid rgba(167,139,250,0.15)',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <CardContent sx={{ p: { xs: 2, md: 4 } }}>
           <Stack spacing={2.2} component="form" onSubmit={handleSubmit}>
-            <Typography
-              variant="h3"
-              sx={{
-                textAlign: 'center',
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #A78BFA, #F472B6)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              W3 Social
-            </Typography>
+            <Stack direction="row" justifyContent="center" variants={letterContainer} component={motion.div} initial="hidden" animate="show">
+              {'W3 Social'.split('').map((letter, index) => (
+                <Typography
+                  key={`${letter}-${index}`}
+                  component={motion.span}
+                  variants={letterItem}
+                  variant="h3"
+                  sx={{
+                    fontWeight: 800,
+                    background: 'var(--gradient-main)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    whiteSpace: 'pre',
+                  }}
+                >
+                  {letter}
+                </Typography>
+              ))}
+            </Stack>
+
             <Typography color="text.secondary" textAlign="center" sx={{ mb: 1 }}>
               Welcome back
             </Typography>
@@ -141,44 +115,51 @@ function Login() {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Button onClick={() => setShowPassword((prev) => !prev)} size="small" color="inherit" sx={{ minWidth: 0, px: 1 }}>
+                    <GlowButton variant="ghost" onClick={() => setShowPassword((prev) => !prev)} size="small">
                       {showPassword ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
-                    </Button>
+                    </GlowButton>
                   </InputAdornment>
                 ),
               }}
             />
 
-            <Button type="submit" fullWidth size="large" variant="contained" disabled={loading}>
-              {loading ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : 'Login'}
-            </Button>
+            <GlowButton type="submit" fullWidth size="large" variant="primary" loading={loading} glow>
+              Login
+            </GlowButton>
 
             <Typography variant="body2" color="text.secondary" textAlign="center">
               Don&apos;t have an account?{' '}
-              <Link component={RouterLink} to="/register" underline="hover" color="primary.main" fontWeight={600}>
+              <Link component={RouterLink} to="/register" underline="hover" color="primary.main" fontWeight={700}>
                 Sign up
               </Link>
             </Typography>
           </Stack>
         </CardContent>
-      </Card>
+      </MotionCard>
 
-      <Box
-        sx={{
-          '@keyframes float1': {
-            '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-          },
-          '@keyframes float2': {
-            '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-            '33%': { transform: 'translate(-40px, 30px) scale(1.05)' },
-            '66%': { transform: 'translate(20px, -40px) scale(0.95)' },
-          },
-        }}
-      />
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.1} sx={{ mt: 2.2, zIndex: 1 }}>
+        {['✦ End-to-end encrypted', '✦ Daily Vibes', '✦ Real-time Chat'].map((item, index) => (
+          <Box
+            key={item}
+            component={motion.div}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 + index * 0.12 }}
+            sx={{
+              px: 1.5,
+              py: 0.8,
+              borderRadius: 999,
+              border: '1px solid rgba(124,58,237,0.25)',
+              bgcolor: 'rgba(8,12,20,0.58)',
+              backdropFilter: 'blur(14px)',
+              color: '#C4B5FD',
+              fontSize: 12,
+            }}
+          >
+            {item}
+          </Box>
+        ))}
+      </Stack>
     </Box>
   )
 }
-
-export default Login

@@ -1,13 +1,14 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
 import LockRoundedIcon from '@mui/icons-material/LockRounded'
 import SendRoundedIcon from '@mui/icons-material/SendRounded'
-import { Avatar, Box, Button, Card, Container, Stack, TextField, Typography } from '@mui/material'
+import { Avatar, Box, Card, Container, Stack, TextField, Typography } from '@mui/material'
 import { format } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { getConversation, sendMessage } from '../api/axios'
+import GlowButton from '../components/GlowButton'
 import { useAuth } from '../context/AuthContext'
 
 export default function ChatConversation() {
@@ -121,9 +122,9 @@ export default function ChatConversation() {
     <Container maxWidth={false} sx={{ maxWidth: 860, py: 3, pb: 12 }}>
       <Card sx={{ p: 2, mb: 1.5 }}>
         <Stack direction="row" spacing={1.2} alignItems="center">
-          <Button onClick={() => navigate('/chat')} color="inherit" sx={{ minWidth: 0, p: 0.8 }}>
+          <GlowButton onClick={() => navigate('/chat')} variant="ghost" sx={{ minWidth: 0, p: 0.6 }}>
             <ArrowBackRoundedIcon />
-          </Button>
+          </GlowButton>
           <Avatar>{otherUsername?.[0]?.toUpperCase()}</Avatar>
           <Typography
             sx={{ fontWeight: 700, cursor: 'pointer' }}
@@ -141,9 +142,9 @@ export default function ChatConversation() {
           <Stack spacing={1.2} sx={{ py: 4, alignItems: 'center' }}>
             <LockRoundedIcon color="warning" />
             <Typography>You can only chat with friends.</Typography>
-            <Button variant="outlined" onClick={() => navigate(`/profile/${userId}`)}>
+            <GlowButton variant="secondary" onClick={() => navigate(`/profile/${userId}`)}>
               Open Profile
-            </Button>
+            </GlowButton>
           </Stack>
         ) : (
           <Stack spacing={1.4}>
@@ -191,9 +192,7 @@ export default function ChatConversation() {
               }
             }}
           />
-          <Button onClick={handleSend} variant="contained" sx={{ minWidth: 54 }} disabled={isForbidden}>
-            <SendRoundedIcon />
-          </Button>
+          <GlowButton onClick={handleSend} sx={{ minWidth: 54 }} disabled={isForbidden} icon={<SendRoundedIcon />} />
         </Stack>
       </Card>
     </Container>

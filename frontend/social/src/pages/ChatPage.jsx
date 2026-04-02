@@ -1,12 +1,13 @@
 import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded'
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded'
-import { Avatar, Badge, Box, Button, Card, Container, List, ListItemButton, Stack, Tab, Tabs, Typography } from '@mui/material'
+import { Avatar, Badge, Box, Card, Container, List, ListItemButton, Stack, Tab, Tabs, Typography } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { getFriends, getInbox } from '../api/axios'
+import GlowButton from '../components/GlowButton'
 
 export default function ChatPage() {
   const navigate = useNavigate()
@@ -119,9 +120,9 @@ export default function ChatPage() {
                     Friend
                   </Typography>
                 </Box>
-                <Button variant="outlined" size="small" onClick={() => navigate(`/chat/${friend.id}`)}>
+                <GlowButton variant="secondary" size="small" onClick={() => navigate(`/chat/${friend.id}`)}>
                   Message
-                </Button>
+                </GlowButton>
               </ListItemButton>
             ))}
           </List>

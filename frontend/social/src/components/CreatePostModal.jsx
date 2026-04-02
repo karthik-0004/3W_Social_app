@@ -4,7 +4,6 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import SendRoundedIcon from '@mui/icons-material/SendRounded'
 import {
   Box,
-  Button,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -21,6 +20,7 @@ import { forwardRef, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 
 import { createPost } from '../api/axios'
+import GlowButton from './GlowButton'
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -196,22 +196,21 @@ function CreatePostModal({ onPostCreated }) {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button onClick={resetAndClose} variant="outlined" color="inherit">
+          <GlowButton onClick={resetAndClose} variant="secondary">
             Cancel
-          </Button>
-          <Button
+          </GlowButton>
+          <GlowButton
             onClick={handleSubmit}
-            variant="contained"
+            variant="primary"
             fullWidth
             disabled={submitting || (!content.trim() && !imageFile)}
-            startIcon={submitting ? null : <SendRoundedIcon />}
+            icon={submitting ? null : <SendRoundedIcon />}
             sx={{
               maxWidth: 280,
-              background: 'linear-gradient(135deg, #6C63FF, #FF6584)',
             }}
           >
             {submitting ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Post now'}
-          </Button>
+          </GlowButton>
         </DialogActions>
       </Dialog>
     </>

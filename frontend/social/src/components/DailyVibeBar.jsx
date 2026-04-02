@@ -1,6 +1,7 @@
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded'
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded'
+import { motion } from 'framer-motion'
 import { Avatar, Box, IconButton, Stack, Typography } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -12,7 +13,7 @@ import VibeViewerModal from './VibeViewerModal'
 
 function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
   return (
-    <Box sx={{ width: 76, flex: '0 0 auto', textAlign: 'center' }}>
+    <Box component={motion.div} whileTap={{ scale: 0.9 }} sx={{ width: 76, flex: '0 0 auto', textAlign: 'center' }}>
       <Box
         onClick={onClick}
         sx={{
@@ -22,14 +23,21 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
           borderRadius: '50%',
           p: '2.5px',
           cursor: 'pointer',
+          '--angle': '0deg',
           background: hasUnseen
-            ? 'conic-gradient(from 120deg, #A78BFA, #F472B6, #FBBF24, #A78BFA)'
+            ? 'conic-gradient(from var(--angle), #7C3AED, #EC4899, #06B6D4, #7C3AED)'
             : 'rgba(148,163,184,0.6)',
-          animation: hasUnseen ? 'vibeRingSpin 3.4s linear infinite' : 'none',
-          '@keyframes vibeRingSpin': {
-            from: { transform: 'rotate(0deg)' },
-            to: { transform: 'rotate(360deg)' },
+          animation: hasUnseen ? 'vibeRing 2.8s linear infinite' : 'none',
+          '@property --angle': {
+            syntax: '"<angle>"',
+            inherits: false,
+            initialValue: '0deg',
           },
+          '@keyframes vibeRing': {
+            from: { '--angle': '0deg' },
+            to: { '--angle': '360deg' },
+          },
+          willChange: 'transform',
         }}
       >
         <Box
@@ -58,6 +66,12 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
                 color: '#0F172A',
                 display: 'grid',
                 placeItems: 'center',
+                boxShadow: '0 0 0 rgba(124,58,237,0)',
+                animation: 'plusPulse 1.6s ease-in-out infinite',
+                '@keyframes plusPulse': {
+                  '0%,100%': { boxShadow: '0 0 0 rgba(124,58,237,0)' },
+                  '50%': { boxShadow: '0 0 14px rgba(124,58,237,0.65)' },
+                },
               }}
             >
               <AddRoundedIcon sx={{ fontSize: 17 }} />
@@ -119,6 +133,10 @@ export default function DailyVibeBar({ refreshSignal = 0, onRefresh }) {
   return (
     <>
       <Box
+        component={motion.div}
+        initial={{ y: -80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.45 }}
         sx={{
           mb: 1.8,
           p: 1.4,
@@ -141,6 +159,13 @@ export default function DailyVibeBar({ refreshSignal = 0, onRefresh }) {
 
         <Box
           ref={scrollRef}
+          component={motion.div}
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.08 } },
+          }}
+          initial="hidden"
+          animate="show"
           sx={{
             display: 'flex',
             gap: 1,

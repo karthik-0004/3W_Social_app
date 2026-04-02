@@ -1,7 +1,6 @@
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import {
   Box,
-  Button,
   CircularProgress,
   Dialog,
   IconButton,
@@ -15,6 +14,7 @@ import { useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 
 import { createVibe } from '../api/axios'
+import GlowButton from './GlowButton'
 
 const NOTE_LIMIT = 150
 const IMAGE_LIMIT_BYTES = 5 * 1024 * 1024
@@ -253,20 +253,18 @@ export default function CreateVibeModal({ open, onClose, onCreated }) {
           />
         )}
 
-        <Button
+        <GlowButton
           fullWidth
           onClick={submit}
           disabled={posting}
+          variant="primary"
           sx={{
             mt: 2,
             py: 1.15,
-            fontWeight: 800,
-            color: '#fff',
-            background: 'linear-gradient(135deg, #A78BFA, #F472B6, #FBBF24)',
           }}
         >
           {posting ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Post Daily Vibe'}
-        </Button>
+        </GlowButton>
       </Box>
     </Dialog>
   )

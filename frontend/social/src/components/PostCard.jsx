@@ -2,13 +2,14 @@ import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineR
 import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded'
 import FavoriteBorderRoundedIcon from '@mui/icons-material/FavoriteBorderRounded'
 import SendRoundedIcon from '@mui/icons-material/SendRounded'
+import confetti from 'canvas-confetti'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Avatar,
   Box,
   Card,
   CardContent,
   Chip,
-  Collapse,
   IconButton,
   InputAdornment,
   Popover,
@@ -20,6 +21,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import { useInView } from 'react-intersection-observer'
 
 import { commentPost, getFeedVibes, likePost } from '../api/axios'
 import { useAuth } from '../context/AuthContext'
@@ -39,6 +41,7 @@ function PostCard({ post, onChange }) {
   const [lastTapTs, setLastTapTs] = useState(0)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [activeVibeGroup, setActiveVibeGroup] = useState(null)
+  const { ref, inView } = useInView({ triggerOnce: true, rootMargin: '-50px' })
 
   useEffect(() => {
     setLocalPost(post)
@@ -103,6 +106,7 @@ function PostCard({ post, onChange }) {
       setReactionEmoji(emoji)
     }
     await handleLike()
+    confetti({ particleCount: 15, spread: 40, colors: ['#EC4899', '#F43F5E', '#FF6B9D'] })
     setShowHeartBurst(true)
     setTimeout(() => setShowHeartBurst(false), 650)
   }
@@ -177,13 +181,34 @@ function PostCard({ post, onChange }) {
   }
 
   return (
-    <Card
-      sx={{
-        borderRadius: 3,
-        borderTop: localPost.is_friend_post ? '2px solid transparent' : 'none',
-        borderImage: localPost.is_friend_post ? 'linear-gradient(135deg, #A78BFA, #F472B6) 1' : 'none',
-      }}
+    <Box
+      ref={ref}
+      component={motion.div}
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.45 }}
+      sx={{ willChange: 'transform, opacity' }}
     >
+      <Card
+        sx={{
+          borderRadius: 3,
+          borderTop: localPost.is_friend_post ? '2px solid transparent' : 'none',
+          borderImage: localPost.is_friend_post ? 'linear-gradient(135deg, #A78BFA, #F472B6) 1' : 'none',
+          overflow: 'hidden',
+        }}
+      >
+      <Box
+        sx={{
+          height: 2,
+          background: 'linear-gradient(90deg, #7C3AED, #EC4899, #06B6D4)',
+          backgroundSize: '200% 100%',
+          animation: 'postShimmer 4s linear infinite',
+          '@keyframes postShimmer': {
+            from: { backgroundPosition: '0% 0%' },
+            to: { backgroundPosition: '200% 0%' },
+          },
+        }}
+      />
       <CardContent
         sx={{
           borderRadius: 2,
@@ -253,7 +278,14 @@ function PostCard({ post, onChange }) {
                 component="img"
                 src={localPost.image}
                 alt="Post"
-                sx={{ width: '100%', maxHeight: 500, objectFit: 'cover', borderRadius: '12px' }}
+                sx={{
+                  width: '100%',
+                  maxHeight: 500,
+                  objectFit: 'cover',
+                  borderRadius: '12px',
+                  transition: 'transform 0.4s ease',
+                  '&:hover': { transform: 'scale(1.02)' },
+                }}
               />
               {showHeartBurst && (
                 <Typography
@@ -295,10 +327,12 @@ function PostCard({ post, onChange }) {
                 disabled={!isAuthenticated || liking}
                 sx={{
                   transition: 'all 0.2s ease',
+                  '& svg': { transition: 'transform 0.25s ease' },
                   '&:hover': {
                     transform: 'scale(1.08)',
                     boxShadow: '0 0 16px rgba(255,101,132,0.35)',
                   },
+                  '&:hover svg': { transform: 'rotate(-10deg)' },
                 }}
               >
                 {likedByCurrentUser ? <FavoriteRoundedIcon sx={{ color: '#FF6584' }} /> : <FavoriteBorderRoundedIcon />}
@@ -335,11 +369,29 @@ function PostCard({ post, onChange }) {
             </Stack>
           </Stack>
 
-          <Collapse in={commentsOpen} timeout={280}>
-            <Stack spacing={1.5}>
+          <AnimatePresence>
+            {commentsOpen && (
+              <Box
+                component={motion.div}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.24 }}
+                sx={{ overflow: 'hidden' }}
+              >
+            <Stack spacing={1.5} sx={{ pt: 0.8 }}>
               <Stack spacing={1.1} sx={{ maxHeight: 300, overflowY: 'auto', pr: 0.5 }}>
                 {(localPost.comments || []).map((item, index) => (
-                  <Stack key={`${item.username}-${item.created_at}-${index}`} direction="row" spacing={1.2} alignItems="flex-start">
+                  <Stack
+                    component={motion.div}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    key={`${item.username}-${item.created_at}-${index}`}
+                    direction="row"
+                    spacing={1.2}
+                    alignItems="flex-start"
+                  >
                     <Avatar sx={{ width: 30, height: 30, fontSize: 13 }}>
                       {(item.username || 'U').charAt(0).toUpperCase()}
                     </Avatar>
@@ -385,7 +437,9 @@ function PostCard({ post, onChange }) {
                 />
               )}
             </Stack>
-          </Collapse>
+                </Box>
+            )}
+          </AnimatePresence>
         </Stack>
 
         <Popover
@@ -422,7 +476,8 @@ function PostCard({ post, onChange }) {
         vibeGroup={activeVibeGroup}
         currentUserId={user?.id}
       />
-    </Card>
+      </Card>
+    </Box>
   )
 }
 

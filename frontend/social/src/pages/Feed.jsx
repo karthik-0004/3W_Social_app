@@ -1,11 +1,12 @@
 import DynamicFeedRoundedIcon from '@mui/icons-material/DynamicFeedRounded'
+import { motion } from 'framer-motion'
 import {
   Box,
-  CircularProgress,
   Container,
   Stack,
   Typography,
 } from '@mui/material'
+import Lottie from 'lottie-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import InfiniteScroll from 'react-infinite-scroll-component'
@@ -26,6 +27,7 @@ function Feed() {
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(true)
   const [vibeRefreshSignal, setVibeRefreshSignal] = useState(0)
+  const [emptyAnimation, setEmptyAnimation] = useState(null)
 
   const loadPosts = async (targetPage = 1, append = false) => {
     try {
@@ -61,6 +63,13 @@ function Feed() {
     loadPosts(1, false)
   }, [])
 
+  useEffect(() => {
+    fetch('https://assets2.lottiefiles.com/packages/lf20_ysrn2v.json')
+      .then((response) => response.json())
+      .then((data) => setEmptyAnimation(data))
+      .catch(() => setEmptyAnimation(null))
+  }, [])
+
   const fetchMore = () => {
     if (!hasMore) return
     loadPosts(page + 1, true)
@@ -85,9 +94,15 @@ function Feed() {
             p: { xs: 2.2, md: 2.6 },
             borderRadius: 3,
             border: '1px solid rgba(255,255,255,0.12)',
-            background:
-              'linear-gradient(120deg, rgba(108,99,255,0.18), rgba(255,101,132,0.14)), rgba(255,255,255,0.04)',
+            background: 'linear-gradient(120deg, rgba(124,58,237,0.24), rgba(236,72,153,0.18), rgba(6,182,212,0.16))',
+            backgroundSize: '200% 200%',
+            animation: 'gradientMove 10s ease infinite',
             backdropFilter: 'blur(12px)',
+            '@keyframes gradientMove': {
+              '0%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+              '100%': { backgroundPosition: '0% 50%' },
+            },
           }}
         >
           <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>
@@ -113,7 +128,13 @@ function Feed() {
               border: '1px dashed rgba(255,255,255,0.2)',
             }}
           >
-            <DynamicFeedRoundedIcon sx={{ fontSize: 42, color: 'primary.main', mb: 1 }} />
+            {emptyAnimation ? (
+              <Box sx={{ width: 210, mx: 'auto', mb: 1 }}>
+                <Lottie animationData={emptyAnimation} loop autoplay />
+              </Box>
+            ) : (
+              <DynamicFeedRoundedIcon sx={{ fontSize: 42, color: 'primary.main', mb: 1 }} />
+            )}
             <Typography variant="h6" sx={{ color: '#fff' }}>
               No posts yet. Be the first to share!
             </Typography>
@@ -125,7 +146,17 @@ function Feed() {
             hasMore={hasMore}
             loader={
               <Stack direction="row" justifyContent="center" sx={{ py: 2 }}>
-                <CircularProgress size={24} />
+                <Stack direction="row" spacing={0.8}>
+                  {[0, 1, 2].map((dot) => (
+                    <Box
+                      key={dot}
+                      component={motion.div}
+                      animate={{ y: [0, -12, 0] }}
+                      transition={{ duration: 0.7, repeat: Infinity, delay: dot * 0.15 }}
+                      sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#C4B5FD' }}
+                    />
+                  ))}
+                </Stack>
               </Stack>
             }
             endMessage={
