@@ -93,7 +93,12 @@ if MONGO_URI:
             'ENFORCE_SCHEMA': False,
             'CLIENT': {
                 'host': MONGO_URI,
-                'serverSelectionTimeoutMS': 5000,
+                'serverSelectionTimeoutMS': 20000,
+                'connectTimeoutMS': 20000,
+                'socketTimeoutMS': 20000,
+                'tls': True,
+                'retryWrites': True,
+                'w': 'majority',
             },
         }
     }
