@@ -12,7 +12,7 @@ import InfiniteScroll from 'react-infinite-scroll-component'
 
 import { fetchPosts } from '../api/axios'
 import CreatePostModal from '../components/CreatePostModal'
-import Navbar from '../components/Navbar'
+import DailyVibeBar from '../components/DailyVibeBar'
 import PostCard from '../components/PostCard'
 import PostSkeleton from '../components/PostSkeleton'
 import { useAuth } from '../context/AuthContext'
@@ -25,6 +25,7 @@ function Feed() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [vibeRefreshSignal, setVibeRefreshSignal] = useState(0)
 
   const loadPosts = async (targetPage = 1, append = false) => {
     try {
@@ -75,8 +76,9 @@ function Feed() {
 
   return (
     <>
-      <Navbar />
-      <Container maxWidth={false} sx={{ pt: 12, pb: 10, maxWidth: 680 }}>
+      <Container maxWidth={false} sx={{ pt: 1.2, pb: 10, maxWidth: { xs: '100%', md: 820 } }}>
+        <DailyVibeBar refreshSignal={vibeRefreshSignal} onRefresh={() => setVibeRefreshSignal((value) => value + 1)} />
+
         <Box
           sx={{
             mb: 2.4,

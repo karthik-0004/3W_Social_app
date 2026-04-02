@@ -1,6 +1,3 @@
-import ChatBubbleRoundedIcon from '@mui/icons-material/ChatBubbleRounded'
-import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded'
-import LoginRoundedIcon from '@mui/icons-material/LoginRounded'
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
 import {
@@ -9,8 +6,6 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  Fade,
-  Grid,
   InputAdornment,
   Link,
   Stack,
@@ -57,126 +52,132 @@ function Login() {
   }
 
   return (
-    <Fade in timeout={550}>
-      <Grid container sx={{ minHeight: '100dvh', p: { xs: 2, md: 3 }, gap: { xs: 2, md: 0 } }}>
-        <Grid size={{ xs: 12, md: 6 }} sx={{ display: { xs: 'none', md: 'block' } }}>
-          <Box
-            sx={{
-              height: '100%',
-              borderRadius: 6,
-              p: 5,
-              color: '#fff',
-              background:
-                'linear-gradient(145deg, rgba(108,99,255,0.95), rgba(255,101,132,0.82)), radial-gradient(circle at 30% 20%, rgba(255,255,255,0.28), transparent 40%)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <Typography variant="h3" sx={{ fontWeight: 800 }}>
-              W3 Social
-            </Typography>
-            <Typography sx={{ mt: 1.2, opacity: 0.92, maxWidth: 380 }}>
-              Share your world
-            </Typography>
+    <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', px: 2 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          width: 400,
+          height: 400,
+          borderRadius: '50%',
+          filter: 'blur(80px)',
+          opacity: 0.4,
+          background: '#A78BFA',
+          top: -120,
+          left: -100,
+          animation: 'float1 14s ease-in-out infinite',
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          width: 400,
+          height: 400,
+          borderRadius: '50%',
+          filter: 'blur(80px)',
+          opacity: 0.4,
+          background: '#F472B6',
+          top: -80,
+          right: -120,
+          animation: 'float2 16s ease-in-out infinite',
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          width: 400,
+          height: 400,
+          borderRadius: '50%',
+          filter: 'blur(80px)',
+          opacity: 0.4,
+          background: '#60A5FA',
+          bottom: -180,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          animation: 'float1 18s ease-in-out infinite',
+        }}
+      />
 
-            <Stack spacing={2.2} sx={{ mt: 7 }}>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <LoginRoundedIcon />
-                <Typography>Post your moments with image-rich stories.</Typography>
-              </Stack>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <FavoriteRoundedIcon />
-                <Typography>Like and react instantly with smooth interactions.</Typography>
-              </Stack>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <ChatBubbleRoundedIcon />
-                <Typography>Comment in real time and stay connected.</Typography>
-              </Stack>
-            </Stack>
-          </Box>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={{ minHeight: '100%', display: 'grid', placeItems: 'center' }}>
-            <Card
+      <Card
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          width: '100%',
+          maxWidth: 520,
+          p: { xs: 1.2, md: 2 },
+          borderRadius: 3,
+          background: 'rgba(13,17,23,0.8)',
+          backdropFilter: 'blur(40px)',
+          border: '1px solid rgba(167,139,250,0.15)',
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2, md: 4 } }}>
+          <Stack spacing={2.2} component="form" onSubmit={handleSubmit}>
+            <Typography
+              variant="h3"
               sx={{
-                width: '100%',
-                maxWidth: 480,
-                borderRadius: 4,
-                background: 'rgba(255,255,255,0.06)',
-                backdropFilter: 'blur(14px)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                textAlign: 'center',
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #A78BFA, #F472B6)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
               }}
             >
-              <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-                <Stack spacing={3} component="form" onSubmit={handleSubmit}>
-                  <Box>
-                    <Typography variant="h4">Welcome Back</Typography>
-                    <Typography color="text.secondary">Sign in to jump back into your feed.</Typography>
-                  </Box>
+              W3 Social
+            </Typography>
+            <Typography color="text.secondary" textAlign="center" sx={{ mb: 1 }}>
+              Welcome back
+            </Typography>
 
-                  <TextField
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    fullWidth
-                  />
+            <TextField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} required fullWidth />
 
-                  <TextField
-                    label="Password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <Button
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            size="small"
-                            color="inherit"
-                            sx={{ minWidth: 0, px: 1 }}
-                          >
-                            {showPassword ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
-                          </Button>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
+            <TextField
+              label="Password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              required
+              fullWidth
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Button onClick={() => setShowPassword((prev) => !prev)} size="small" color="inherit" sx={{ minWidth: 0, px: 1 }}>
+                      {showPassword ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
+                    </Button>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-                  <Button
-                    type="submit"
-                    fullWidth
-                    size="large"
-                    variant="contained"
-                    disabled={loading}
-                    sx={{
-                      borderRadius: '999px',
-                      fontWeight: 800,
-                      background: 'linear-gradient(135deg, #6C63FF, #FF6584)',
-                    }}
-                  >
-                    {loading ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : 'Login'}
-                  </Button>
+            <Button type="submit" fullWidth size="large" variant="contained" disabled={loading}>
+              {loading ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : 'Login'}
+            </Button>
 
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Don&apos;t have an account?{' '}
-                    <Link component={RouterLink} to="/register" underline="hover" color="primary.main" fontWeight={600}>
-                      Sign up
-                    </Link>
-                  </Typography>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Box>
-        </Grid>
-      </Grid>
-    </Fade>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              Don&apos;t have an account?{' '}
+              <Link component={RouterLink} to="/register" underline="hover" color="primary.main" fontWeight={600}>
+                Sign up
+              </Link>
+            </Typography>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Box
+        sx={{
+          '@keyframes float1': {
+            '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+          },
+          '@keyframes float2': {
+            '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+            '33%': { transform: 'translate(-40px, 30px) scale(1.05)' },
+            '66%': { transform: 'translate(20px, -40px) scale(0.95)' },
+          },
+        }}
+      />
+    </Box>
   )
 }
 

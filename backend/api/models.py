@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -32,6 +35,10 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
 	username = models.CharField(max_length=150, unique=True)
 	email = models.EmailField(unique=True)
+	full_name = models.CharField(max_length=150, blank=True)
+	bio = models.CharField(max_length=150, blank=True)
+	website = models.URLField(blank=True)
+	location = models.CharField(max_length=120, blank=True)
 	profile_pic = models.ImageField(upload_to='profiles/', null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	is_active = models.BooleanField(default=True)
@@ -59,3 +66,73 @@ class Post(models.Model):
 
 	def __str__(self):
 		return f'Post by {self.username} ({self.id})'
+
+
+class FriendRequest(models.Model):
+	STATUS_CHOICES = [
+		('pending', 'Pending'),
+		('accepted', 'Accepted'),
+		('rejected', 'Rejected'),
+	]
+
+	sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
+	receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+	status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		unique_together = ('sender', 'receiver')
+
+
+class Friendship(models.Model):
+	user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships1')
+	user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships2')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		unique_together = ('user1', 'user2')
+
+
+class Message(models.Model):
+	sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+	receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+	text = models.TextField()
+	is_read = models.BooleanField(default=False)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['created_at']
+
+
+class Notification(models.Model):
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+	from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
+	type = models.CharField(max_length=20)
+	post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True)
+	is_read = models.BooleanField(default=False)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+
+class DailyVibe(models.Model):
+	MEDIA_TYPE_CHOICES = [
+		('image', 'Image'),
+		('video', 'Video'),
+		('note', 'Note'),
+	]
+
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_vibes')
+	media = models.FileField(upload_to='vibes/', null=True, blank=True)
+	note = models.TextField(blank=True)
+	media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES)
+	viewers = models.JSONField(default=list, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	expires_at = models.DateTimeField(blank=True, null=True)
+
+	def save(self, *args, **kwargs):
+		if not self.expires_at:
+			self.expires_at = timezone.now() + timedelta(hours=24)
+		super().save(*args, **kwargs)
+
+	def is_expired(self):
+		return timezone.now() > self.expires_at

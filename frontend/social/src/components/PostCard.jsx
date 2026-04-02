@@ -7,9 +7,11 @@ import {
   Box,
   Card,
   CardContent,
+  Chip,
   Collapse,
   IconButton,
   InputAdornment,
+  Popover,
   Stack,
   TextField,
   Typography,
@@ -17,23 +19,35 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 
-import { commentPost, likePost } from '../api/axios'
+import { commentPost, getFeedVibes, likePost } from '../api/axios'
 import { useAuth } from '../context/AuthContext'
+import VibeViewerModal from './VibeViewerModal'
 
 function PostCard({ post, onChange }) {
   const { user, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const [comment, setComment] = useState('')
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [liking, setLiking] = useState(false)
   const [commenting, setCommenting] = useState(false)
   const [localPost, setLocalPost] = useState(post)
+  const [reactionEmoji, setReactionEmoji] = useState(null)
+  const [reactionAnchor, setReactionAnchor] = useState(null)
+  const [showHeartBurst, setShowHeartBurst] = useState(false)
+  const [lastTapTs, setLastTapTs] = useState(0)
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [activeVibeGroup, setActiveVibeGroup] = useState(null)
 
   useEffect(() => {
     setLocalPost(post)
   }, [post])
 
   const username = localPost.username || 'User'
+  const profileId = localPost.user_id || localPost.user?.id
+  const profilePic = localPost.user_profile_pic || localPost.user?.profile_pic || ''
+  const hasActiveVibe = Boolean(localPost.user_has_active_vibe)
 
   const likedByCurrentUser = useMemo(() => {
     if (!user?.username) return false
@@ -84,6 +98,23 @@ function PostCard({ post, onChange }) {
     }
   }
 
+  const triggerLikeWithReaction = async (emoji = null) => {
+    if (emoji) {
+      setReactionEmoji(emoji)
+    }
+    await handleLike()
+    setShowHeartBurst(true)
+    setTimeout(() => setShowHeartBurst(false), 650)
+  }
+
+  const onPostDoubleTap = () => {
+    const now = Date.now()
+    if (now - lastTapTs < 280) {
+      triggerLikeWithReaction('❤️')
+    }
+    setLastTapTs(now)
+  }
+
   const handleComment = async () => {
     if (!isAuthenticated || !comment.trim() || commenting) return
     const optimisticComment = {
@@ -122,8 +153,37 @@ function PostCard({ post, onChange }) {
     }
   }
 
+  const openProfileOrVibe = async () => {
+    if (!profileId) return
+
+    if (!hasActiveVibe) {
+      navigate(`/profile/${profileId}`)
+      return
+    }
+
+    try {
+      const feed = await getFeedVibes()
+      const found = (Array.isArray(feed) ? feed : []).find((item) => String(item.user?.id) === String(profileId))
+      if (found?.vibes?.length) {
+        setActiveVibeGroup(found)
+        setViewerOpen(true)
+        return
+      }
+    } catch {
+      // Fall through to profile navigation.
+    }
+
+    navigate(`/profile/${profileId}`)
+  }
+
   return (
-    <Card sx={{ borderRadius: 3 }}>
+    <Card
+      sx={{
+        borderRadius: 3,
+        borderTop: localPost.is_friend_post ? '2px solid transparent' : 'none',
+        borderImage: localPost.is_friend_post ? 'linear-gradient(135deg, #A78BFA, #F472B6) 1' : 'none',
+      }}
+    >
       <CardContent
         sx={{
           borderRadius: 2,
@@ -139,11 +199,34 @@ function PostCard({ post, onChange }) {
       >
         <Stack spacing={2}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Avatar src={localPost.user?.profile_pic || ''} sx={{ background: avatarGradient }}>
-              {username.charAt(0).toUpperCase()}
-            </Avatar>
+            <Box
+              sx={{
+                p: hasActiveVibe ? '2.4px' : 0,
+                borderRadius: '50%',
+                background: hasActiveVibe
+                  ? 'conic-gradient(from 120deg, #A78BFA, #F472B6, #FBBF24, #A78BFA)'
+                  : 'transparent',
+                animation: hasActiveVibe ? 'postVibeRing 3.4s linear infinite' : 'none',
+                '@keyframes postVibeRing': {
+                  from: { transform: 'rotate(0deg)' },
+                  to: { transform: 'rotate(360deg)' },
+                },
+              }}
+            >
+              <Avatar
+                src={profilePic}
+                sx={{ background: avatarGradient, cursor: profileId ? 'pointer' : 'default' }}
+                onClick={openProfileOrVibe}
+              >
+                {username.charAt(0).toUpperCase()}
+              </Avatar>
+            </Box>
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fff' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: '#fff', cursor: profileId ? 'pointer' : 'default' }}
+                onClick={() => profileId && navigate(`/profile/${profileId}`)}
+              >
                 {username}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -162,17 +245,53 @@ function PostCard({ post, onChange }) {
 
           {localPost.image && (
             <Box
-              component="img"
-              src={localPost.image}
-              alt="Post"
-              sx={{ width: '100%', maxHeight: 500, objectFit: 'cover', borderRadius: '12px' }}
-            />
+              sx={{ position: 'relative' }}
+              onClick={onPostDoubleTap}
+              onDoubleClick={() => triggerLikeWithReaction('❤️')}
+            >
+              <Box
+                component="img"
+                src={localPost.image}
+                alt="Post"
+                sx={{ width: '100%', maxHeight: 500, objectFit: 'cover', borderRadius: '12px' }}
+              />
+              {showHeartBurst && (
+                <Typography
+                  sx={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: 54,
+                    animation: 'heartPop 620ms ease',
+                    pointerEvents: 'none',
+                    '@keyframes heartPop': {
+                      '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0.5)' },
+                      '30%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1.2)' },
+                      '100%': { opacity: 0, transform: 'translate(-50%, -50%) scale(1.4)' },
+                    },
+                  }}
+                >
+                  {reactionEmoji || '❤️'}
+                </Typography>
+              )}
+            </Box>
           )}
 
           <Stack direction="row" spacing={1.8} alignItems="center">
             <Stack direction="row" spacing={0.5} alignItems="center">
               <IconButton
-                onClick={handleLike}
+                onClick={(event) => {
+                  if (event.shiftKey) {
+                    setReactionAnchor(event.currentTarget)
+                    return
+                  }
+                  triggerLikeWithReaction('❤️')
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setReactionAnchor(event.currentTarget)
+                }}
                 disabled={!isAuthenticated || liking}
                 sx={{
                   transition: 'all 0.2s ease',
@@ -184,6 +303,14 @@ function PostCard({ post, onChange }) {
               >
                 {likedByCurrentUser ? <FavoriteRoundedIcon sx={{ color: '#FF6584' }} /> : <FavoriteBorderRoundedIcon />}
               </IconButton>
+              {reactionEmoji && (
+                <Chip
+                  size="small"
+                  label={reactionEmoji}
+                  onDelete={() => setReactionEmoji(null)}
+                  sx={{ ml: 0.4, background: 'rgba(255,255,255,0.08)' }}
+                />
+              )}
               <Typography variant="body2" color="text.secondary">
                 {localPost.likes_count || 0}
               </Typography>
@@ -260,7 +387,41 @@ function PostCard({ post, onChange }) {
             </Stack>
           </Collapse>
         </Stack>
+
+        <Popover
+          open={Boolean(reactionAnchor)}
+          anchorEl={reactionAnchor}
+          onClose={() => setReactionAnchor(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          PaperProps={{ sx: { p: 0.7, borderRadius: 3 } }}
+        >
+          <Stack direction="row" spacing={0.7}>
+            {['❤️', '🔥', '😂', '😍', '👏', '😮'].map((emoji) => (
+              <IconButton
+                key={emoji}
+                onClick={() => {
+                  setReactionAnchor(null)
+                  triggerLikeWithReaction(emoji)
+                }}
+                sx={{ fontSize: 24 }}
+              >
+                {emoji}
+              </IconButton>
+            ))}
+          </Stack>
+        </Popover>
       </CardContent>
+
+      <VibeViewerModal
+        open={viewerOpen}
+        onClose={() => {
+          setViewerOpen(false)
+          setActiveVibeGroup(null)
+        }}
+        vibeGroup={activeVibeGroup}
+        currentUserId={user?.id}
+      />
     </Card>
   )
 }
