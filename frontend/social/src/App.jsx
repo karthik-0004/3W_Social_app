@@ -1,9 +1,11 @@
 import { CssBaseline, ThemeProvider, useTheme as useMuiTheme } from '@mui/material'
 import { AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import Layout from './components/Layout'
+import NetworkRetryBanner from './components/NetworkRetryBanner'
 import PageTransition from './components/PageTransition'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
@@ -106,10 +108,24 @@ function AppShell() {
 
 function AppContent() {
   const theme = useMuiTheme()
+  const [showRetryBanner, setShowRetryBanner] = useState(false)
+
+  useEffect(() => {
+    const onRetryState = (event) => {
+      const next = Boolean(event?.detail?.isRetrying)
+      setShowRetryBanner(next)
+    }
+
+    window.addEventListener('network:retry-state', onRetryState)
+    return () => {
+      window.removeEventListener('network:retry-state', onRetryState)
+    }
+  }, [])
 
   return (
     <AuthProvider>
       <BrowserRouter>
+        <NetworkRetryBanner open={showRetryBanner} />
         <Toaster
           position="top-center"
           toastOptions={{

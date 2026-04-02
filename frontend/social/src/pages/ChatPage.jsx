@@ -19,21 +19,37 @@ export default function ChatPage() {
   useEffect(() => {
     const loadInbox = async () => {
       setLoading(true)
-      try {
-        if (tab === 'messages') {
-          const inboxData = await getInbox()
-          setItems(Array.isArray(inboxData) ? inboxData : [])
-        }
-        const friendsData = await getFriends()
-        setFriends(Array.isArray(friendsData) ? friendsData : [])
-      } catch {
-        if (tab === 'messages') {
+      const requests = [getFriends()]
+      if (tab === 'messages') requests.unshift(getInbox())
+
+      const results = await Promise.allSettled(requests)
+
+      if (tab === 'messages') {
+        const inboxResult = results[0]
+        const friendsResult = results[1]
+
+        if (inboxResult?.status === 'fulfilled') {
+          setItems(Array.isArray(inboxResult.value) ? inboxResult.value : [])
+        } else {
           setItems([])
-          toast.error('Messages are temporarily unavailable. You can still chat with friends from the Friends tab.')
+          toast.error('Failed to load messages.')
         }
-      } finally {
-        setLoading(false)
+
+        if (friendsResult?.status === 'fulfilled') {
+          setFriends(Array.isArray(friendsResult.value) ? friendsResult.value : [])
+        } else {
+          setFriends([])
+        }
+      } else {
+        const friendsResult = results[0]
+        if (friendsResult?.status === 'fulfilled') {
+          setFriends(Array.isArray(friendsResult.value) ? friendsResult.value : [])
+        } else {
+          setFriends([])
+        }
       }
+
+      setLoading(false)
     }
 
     loadInbox()

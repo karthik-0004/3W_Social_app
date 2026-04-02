@@ -24,7 +24,7 @@ import {
   useTheme,
 } from '@mui/material'
 import { format, isToday, isYesterday } from 'date-fns'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
@@ -34,6 +34,25 @@ import GlowButton from '../components/GlowButton'
 import { useAuth } from '../context/AuthContext'
 
 const QUICK_REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '🔥', '👍', '👎']
+
+function buildChatEventsSocketUrl() {
+  const rawBase = (import.meta.env.VITE_BACKEND_URL || '').trim()
+  const token = window.sessionStorage.getItem('token') || window.localStorage.getItem('token')
+  if (!token) return null
+
+  let wsBase = ''
+  if (rawBase) {
+    wsBase = rawBase
+      .replace(/^http:\/\//i, 'ws://')
+      .replace(/^https:\/\//i, 'wss://')
+      .replace(/\/$/, '')
+  } else {
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    wsBase = `${scheme}//${window.location.host}`
+  }
+
+  return `${wsBase}/ws/chat/events/?token=${encodeURIComponent(token)}`
+}
 
 function formatDateDivider(dateString) {
   const date = new Date(dateString)
@@ -46,7 +65,31 @@ function mergeIncomingMessages(previous, incoming) {
   const pending = previous.filter((item) => String(item.id).startsWith('tmp-'))
   const incomingIds = new Set(incoming.map((item) => String(item.id)))
   const safePending = pending.filter((item) => !incomingIds.has(String(item.id)))
-  return [...incoming, ...safePending]
+  const merged = [...incoming, ...safePending]
+
+  if (merged.length !== previous.length) return merged
+
+  for (let index = 0; index < merged.length; index += 1) {
+    const next = merged[index]
+    const prev = previous[index]
+    if (!prev) return merged
+
+    const sameId = String(prev.id) === String(next.id)
+    const sameCore =
+      prev.text === next.text
+      && prev.image_url === next.image_url
+      && prev.is_deleted === next.is_deleted
+      && prev.is_read === next.is_read
+      && prev.created_at === next.created_at
+    const prevReactions = JSON.stringify(prev.reaction_summary || [])
+    const nextReactions = JSON.stringify(next.reaction_summary || [])
+
+    if (!sameId || !sameCore || prevReactions !== nextReactions) {
+      return merged
+    }
+  }
+
+  return previous
 }
 
 function applyOptimisticReaction(messages, messageId, emoji, username) {
@@ -93,6 +136,8 @@ export default function ChatConversation() {
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [wsConnected, setWsConnected] = useState(false)
   const [isForbidden, setIsForbidden] = useState(false)
   const [friendData, setFriendData] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
@@ -105,6 +150,29 @@ export default function ChatConversation() {
   const fileInputRef = useRef(null)
   const inputToolsRef = useRef(null)
   const longPressRef = useRef(null)
+  const socketRef = useRef(null)
+  const reconnectTimerRef = useRef(null)
+  const lastRealtimeSyncAtRef = useRef(0)
+  const isMountedRef = useRef(true)
+  const pollingInFlightRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      if (longPressRef.current) {
+        clearTimeout(longPressRef.current)
+        longPressRef.current = null
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+      if (socketRef.current) {
+        socketRef.current.close()
+        socketRef.current = null
+      }
+    }
+  }, [])
 
   const otherUsername = useMemo(() => {
     if (friendData?.user?.username) return friendData.user.username
@@ -150,30 +218,100 @@ export default function ChatConversation() {
     loadUser()
   }, [userId])
 
+  const loadConversation = useCallback(async (silent = false) => {
+    if (pollingInFlightRef.current) return
+    pollingInFlightRef.current = true
+    if (!silent) setLoading(true)
+
+    try {
+      const data = await getConversation(userId)
+      const incoming = Array.isArray(data) ? data : []
+      if (!isMountedRef.current) return
+      setMessages((prev) => mergeIncomingMessages(prev, incoming))
+      setIsForbidden(false)
+    } catch (error) {
+      if (!isMountedRef.current) return
+      if (error?.response?.status === 403) {
+        setIsForbidden(true)
+        setMessages([])
+        return
+      }
+      if (!silent) toast.error('Failed to load conversation.')
+    } finally {
+      pollingInFlightRef.current = false
+      if (!silent) setLoading(false)
+    }
+  }, [userId])
+
   useEffect(() => {
-    const loadConversation = async (silent = false) => {
-      if (!silent) setLoading(true)
-      try {
-        const data = await getConversation(userId)
-        const incoming = Array.isArray(data) ? data : []
-        setMessages((prev) => mergeIncomingMessages(prev, incoming))
-        setIsForbidden(false)
-      } catch (error) {
-        if (error?.response?.status === 403) {
-          setIsForbidden(true)
-          setMessages([])
-          return
+    loadConversation(false)
+    const interval = setInterval(() => loadConversation(true), wsConnected ? 8000 : 2000)
+    return () => clearInterval(interval)
+  }, [loadConversation, wsConnected])
+
+  useEffect(() => {
+    const socketUrl = buildChatEventsSocketUrl()
+    if (!socketUrl) return undefined
+
+    let isEffectActive = true
+
+    const connect = () => {
+      if (!isEffectActive) return
+
+      const socket = new WebSocket(socketUrl)
+      socketRef.current = socket
+
+      socket.onopen = () => {
+        if (!isEffectActive) return
+        setWsConnected(true)
+      }
+
+      socket.onmessage = (event) => {
+        if (!isEffectActive) return
+
+        try {
+          const payload = JSON.parse(event.data || '{}')
+          if (payload.type !== 'chat_event') return
+
+          const peerId = Number(payload.peer_id)
+          if (String(peerId) !== String(userId)) return
+
+          const now = Date.now()
+          if (now - lastRealtimeSyncAtRef.current < 250) return
+          lastRealtimeSyncAtRef.current = now
+
+          loadConversation(true)
+        } catch {
+          // Ignore malformed realtime payloads.
         }
-        if (!silent) toast.error('Failed to load conversation.')
-      } finally {
-        if (!silent) setLoading(false)
+      }
+
+      socket.onclose = () => {
+        if (!isEffectActive) return
+        setWsConnected(false)
+        reconnectTimerRef.current = setTimeout(connect, 1800)
+      }
+
+      socket.onerror = () => {
+        socket.close()
       }
     }
 
-    loadConversation(false)
-    const interval = setInterval(() => loadConversation(true), 4000)
-    return () => clearInterval(interval)
-  }, [userId])
+    connect()
+
+    return () => {
+      isEffectActive = false
+      setWsConnected(false)
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+      if (socketRef.current) {
+        socketRef.current.close()
+        socketRef.current = null
+      }
+    }
+  }, [loadConversation, userId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -232,21 +370,22 @@ export default function ChatConversation() {
     setImagePreviewUrl(URL.createObjectURL(file))
   }
 
-  const clearSelectedImage = (preserveCurrentPreview = false) => {
-    if (imagePreviewUrl && !preserveCurrentPreview) URL.revokeObjectURL(imagePreviewUrl)
+  const clearSelectedImage = () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
     setSelectedImage(null)
     setImagePreviewUrl('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleSend = async () => {
-    if (isForbidden) return
+    if (isForbidden || sending) return
 
     const text = draft.trim()
     if (!text && !selectedImage) return
 
     const tempId = `tmp-${Date.now()}`
-    const tempUrl = selectedImage ? imagePreviewUrl : null
+    const imageToSend = selectedImage
+    const tempUrl = imageToSend ? URL.createObjectURL(imageToSend) : null
     const optimistic = {
       id: tempId,
       sender: user.id,
@@ -266,26 +405,38 @@ export default function ChatConversation() {
     }
 
     setMessages((prev) => [...prev, optimistic])
+    setSending(true)
 
     const formData = new FormData()
     if (text) formData.append('text', text)
-    if (selectedImage) formData.append('image', selectedImage)
+    if (imageToSend) formData.append('image', imageToSend)
 
     setDraft('')
-    clearSelectedImage(true)
+    clearSelectedImage()
     setEmojiOpen(false)
 
     try {
       const sent = await sendMessage(userId, formData)
       setMessages((prev) => prev.map((item) => (item.id === tempId ? sent : item)))
+      if (tempUrl) URL.revokeObjectURL(tempUrl)
     } catch (error) {
       setMessages((prev) => prev.filter((item) => item.id !== tempId))
+      setDraft(text)
+      if (imageToSend) {
+        const restoredPreview = URL.createObjectURL(imageToSend)
+        setSelectedImage(imageToSend)
+        setImagePreviewUrl(restoredPreview)
+      }
+      if (tempUrl) URL.revokeObjectURL(tempUrl)
+
       if (error?.response?.status === 403) {
         setIsForbidden(true)
         toast.error('You can only chat with friends.')
       } else {
-        toast.error('Message send failed.')
+        toast.error('Message send failed. Please retry.')
       }
+    } finally {
+      setSending(false)
     }
   }
 
@@ -296,8 +447,11 @@ export default function ChatConversation() {
       setMessages((prev) => prev.map((item) => (String(item.id) === String(messageId) ? updated : item)))
     } catch {
       toast.error('Could not update reaction.')
-      const data = await getConversation(userId)
-      setMessages(Array.isArray(data) ? data : [])
+      try {
+        await loadConversation(true)
+      } catch {
+        // Keep optimistic state if refresh fails; next polling tick will resync.
+      }
     }
   }
 
@@ -311,7 +465,7 @@ export default function ChatConversation() {
     }
   }
 
-  const canSend = !isForbidden && (draft.trim() || selectedImage)
+  const canSend = !isForbidden && !sending && (draft.trim() || selectedImage)
 
   return (
     <Container maxWidth={false} sx={{ maxWidth: 980, py: 2.2, pb: 15, bgcolor: isLight ? '#F7F6FF' : 'transparent', borderRadius: 3 }}>
@@ -545,7 +699,7 @@ export default function ChatConversation() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault()
-                    handleSend()
+                    if (!sending) handleSend()
                   }
                 }}
               />

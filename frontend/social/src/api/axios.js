@@ -2,7 +2,64 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL || '',
+  timeout: 15000,
 })
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+let activeRetryScopes = 0
+
+const emitRetryState = (isRetrying) => {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('network:retry-state', {
+      detail: {
+        isRetrying,
+        activeScopes: activeRetryScopes,
+      },
+    }),
+  )
+}
+
+const shouldRetryRequest = (error) => {
+  const status = error?.response?.status
+  if (!status) return true
+  return status === 408 || status === 429 || status >= 500
+}
+
+const withRetry = async (requestFactory, { attempts = 3, delayMs = 400 } = {}) => {
+  let lastError = null
+  let hasEmittedRetryStart = false
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const result = await requestFactory()
+      if (hasEmittedRetryStart) {
+        activeRetryScopes = Math.max(0, activeRetryScopes - 1)
+        emitRetryState(activeRetryScopes > 0)
+      }
+      return result
+    } catch (error) {
+      lastError = error
+      if (attempt === attempts || !shouldRetryRequest(error)) {
+        if (hasEmittedRetryStart) {
+          activeRetryScopes = Math.max(0, activeRetryScopes - 1)
+          emitRetryState(activeRetryScopes > 0)
+        }
+        throw error
+      }
+
+      if (!hasEmittedRetryStart) {
+        hasEmittedRetryStart = true
+        activeRetryScopes += 1
+        emitRetryState(true)
+      }
+
+      await sleep(delayMs * attempt)
+    }
+  }
+
+  throw lastError
+}
 
 api.interceptors.request.use(
   (config) => {
@@ -47,7 +104,10 @@ export const loginUser = async (data) => {
 }
 
 export const fetchPosts = async (page = 1, limit = 10) => {
-  const response = await api.get(`/api/posts/?page=${page}&limit=${limit}`)
+  const response = await withRetry(() => api.get(`/api/posts/?page=${page}&limit=${limit}`), {
+    attempts: 3,
+    delayMs: 450,
+  })
   return response.data
 }
 
@@ -145,7 +205,10 @@ export const getPendingRequests = async () => {
 }
 
 export const getFriends = async () => {
-  const response = await api.get('/api/friends/')
+  const response = await withRetry(() => api.get('/api/friends/'), {
+    attempts: 3,
+    delayMs: 400,
+  })
   return response.data
 }
 
@@ -155,7 +218,10 @@ export const getUserProfile = async (userId) => {
 }
 
 export const getInbox = async () => {
-  const response = await api.get('/api/chat/inbox/')
+  const response = await withRetry(() => api.get('/api/chat/inbox/'), {
+    attempts: 3,
+    delayMs: 400,
+  })
   return response.data
 }
 
@@ -165,11 +231,17 @@ export const getConversation = async (userId) => {
 }
 
 export const sendMessage = async (userId, formData) => {
-  const response = await api.post(`/api/chat/${userId}/`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
+  const response = await withRetry(
+    () => api.post(`/api/chat/${userId}/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+    {
+      attempts: 2,
+      delayMs: 350,
     },
-  })
+  )
   return response.data
 }
 
@@ -184,7 +256,10 @@ export const deleteMessage = async (messageId) => {
 }
 
 export const getNotifications = async () => {
-  const response = await api.get('/api/notifications/')
+  const response = await withRetry(() => api.get('/api/notifications/'), {
+    attempts: 3,
+    delayMs: 450,
+  })
   return response.data
 }
 

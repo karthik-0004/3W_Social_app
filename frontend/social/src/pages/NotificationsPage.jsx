@@ -26,15 +26,22 @@ export default function NotificationsPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      try {
-        const [notificationsData, pendingData] = await Promise.all([getNotifications(), getPendingRequests()])
-        setItems(Array.isArray(notificationsData) ? notificationsData : [])
-        setPendingRequests(Array.isArray(pendingData) ? pendingData : [])
-      } catch {
+      const [notificationsResult, pendingResult] = await Promise.allSettled([getNotifications(), getPendingRequests()])
+
+      if (notificationsResult.status === 'fulfilled') {
+        setItems(Array.isArray(notificationsResult.value) ? notificationsResult.value : [])
+      } else {
+        setItems([])
         toast.error('Failed to load notifications.')
-      } finally {
-        setLoading(false)
       }
+
+      if (pendingResult.status === 'fulfilled') {
+        setPendingRequests(Array.isArray(pendingResult.value) ? pendingResult.value : [])
+      } else {
+        setPendingRequests([])
+      }
+
+      setLoading(false)
     }
 
     load()

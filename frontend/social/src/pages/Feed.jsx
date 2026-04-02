@@ -52,7 +52,9 @@ function Feed() {
       setHasMore(Boolean(data?.next))
       setPage(targetPage)
     } catch {
-      toast.error('Failed to load posts.')
+      if (!append && targetPage === 1) {
+        toast.error('Failed to load home page.')
+      }
       setHasMore(false)
     } finally {
       setLoading(false)

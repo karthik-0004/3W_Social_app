@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 
-from django.db.models import Q
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from django.db.models import Case, Count, F, IntegerField, OuterRef, Q, Subquery, Value, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes, parser_classes
@@ -60,6 +63,39 @@ def get_friends(user):
 	for friendship in friendships:
 		friends.append(friendship.user2 if friendship.user1 == user else friendship.user1)
 	return friends
+
+
+def emit_chat_event(message, action='upsert'):
+	channel_layer = get_channel_layer()
+	if not channel_layer:
+		return
+
+	sender_id = message.sender_id
+	receiver_id = message.receiver_id
+
+	payload_by_user = {
+		sender_id: {
+			'type': 'chat_event',
+			'action': action,
+			'message_id': message.id,
+			'from_user_id': sender_id,
+			'to_user_id': receiver_id,
+			'peer_id': receiver_id,
+			'sent_at': timezone.now().isoformat(),
+		},
+		receiver_id: {
+			'type': 'chat_event',
+			'action': action,
+			'message_id': message.id,
+			'from_user_id': sender_id,
+			'to_user_id': receiver_id,
+			'peer_id': sender_id,
+			'sent_at': timezone.now().isoformat(),
+		},
+	}
+
+	for user_id, payload in payload_by_user.items():
+		async_to_sync(channel_layer.group_send)(f'chat_user_{user_id}', payload)
 
 
 class RegisterView(APIView):
@@ -459,11 +495,9 @@ class ConversationView(APIView):
 
 		messages = Message.objects.filter(
 			(Q(sender=request.user) & Q(receiver=other_user)) | (Q(sender=other_user) & Q(receiver=request.user))
-		).order_by('created_at')
-		for unread_message in Message.objects.filter(sender=other_user, receiver=request.user):
-			if not unread_message.is_read:
-				unread_message.is_read = True
-				unread_message.save(update_fields=['is_read'])
+		).select_related('sender', 'receiver').order_by('created_at')
+
+		Message.objects.filter(sender=other_user, receiver=request.user, is_read=False).update(is_read=True)
 		serializer = MessageSerializer(messages, many=True, context={'request': request})
 		return Response(serializer.data)
 
@@ -491,6 +525,7 @@ class ConversationView(APIView):
 			message_type=message_type,
 			reactions={},
 		)
+		emit_chat_event(message, action='upsert')
 		return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -515,6 +550,7 @@ class ReactToMessageView(APIView):
 
 		message.reactions = toggle_single_reaction(message.reactions, emoji, request.user.username)
 		message.save(update_fields=['reactions'])
+		emit_chat_event(message, action='upsert')
 		return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
@@ -538,6 +574,7 @@ class DeleteMessageView(APIView):
 		message.reactions = {}
 		message.is_deleted = True
 		message.save(update_fields=['text', 'image', 'message_type', 'reactions', 'is_deleted'])
+		emit_chat_event(message, action='delete')
 
 		return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_200_OK)
 
@@ -547,36 +584,63 @@ class InboxView(APIView):
 
 	def get(self, request):
 		user = request.user
-		all_messages = list(Message.objects.all().order_by('-created_at'))
-		unique_ids = set()
-		for message in all_messages:
-			if message.sender_id == user.id and message.receiver_id != user.id:
-				unique_ids.add(message.receiver_id)
-			if message.receiver_id == user.id and message.sender_id != user.id:
-				unique_ids.add(message.sender_id)
 
-		users = list(User.objects.filter(id__in=unique_ids))
+		friendship_pairs = Friendship.objects.filter(Q(user1_id=user.id) | Q(user2_id=user.id)).values_list('user1_id', 'user2_id')
+		friend_ids = set()
+		for user1_id, user2_id in friendship_pairs:
+			friend_ids.add(user2_id if user1_id == user.id else user1_id)
+
+		if not friend_ids:
+			return Response([])
+
+		conversation_partner_ids = Message.objects.filter(
+			Q(sender_id=user.id) | Q(receiver_id=user.id)
+		).annotate(
+			partner_id=Case(
+				When(sender_id=user.id, then=F('receiver_id')),
+				default=F('sender_id'),
+				output_field=IntegerField(),
+			)
+		).values_list('partner_id', flat=True).distinct()
+
+		eligible_ids = set(conversation_partner_ids).intersection(friend_ids)
+		if not eligible_ids:
+			return Response([])
+
+		last_message_id_subquery = Message.objects.filter(
+			(Q(sender_id=user.id) & Q(receiver_id=OuterRef('pk')))
+			| (Q(sender_id=OuterRef('pk')) & Q(receiver_id=user.id))
+		).order_by('-created_at').values('id')[:1]
+
+		unread_count_subquery = Message.objects.filter(
+			sender_id=OuterRef('pk'),
+			receiver_id=user.id,
+			is_read=False,
+		).values('sender_id').annotate(total=Count('id')).values('total')[:1]
+
+		users = list(
+			User.objects.filter(id__in=eligible_ids)
+			.annotate(
+				last_message_id=Subquery(last_message_id_subquery),
+				unread_count=Coalesce(Subquery(unread_count_subquery), Value(0)),
+			)
+			.order_by('-last_message_id')
+		)
+
+		message_ids = [item.last_message_id for item in users if item.last_message_id]
+		messages_by_id = {
+			item.id: item
+			for item in Message.objects.filter(id__in=message_ids).select_related('sender', 'receiver')
+		}
+
 		result = []
 		for each_user in users:
-			if not are_friends(user, each_user):
-				continue
-
-			conversation_messages = [
-				message for message in all_messages
-				if (
-					(message.sender_id == user.id and message.receiver_id == each_user.id)
-					or (message.sender_id == each_user.id and message.receiver_id == user.id)
-				)
-			]
-			last_msg = conversation_messages[0] if conversation_messages else None
-			unread_count = sum(
-				1 for message in conversation_messages if message.sender_id == each_user.id and not message.is_read
-			)
+			last_msg = messages_by_id.get(each_user.last_message_id)
 			result.append(
 				{
 					'user': UserPublicSerializer(each_user, context={'request': request}).data,
 					'last_message': MessageSerializer(last_msg, context={'request': request}).data if last_msg else None,
-					'unread_count': unread_count,
+					'unread_count': each_user.unread_count or 0,
 				}
 			)
 
@@ -589,10 +653,7 @@ class NotificationsView(APIView):
 
 	def get(self, request):
 		notifications = Notification.objects.filter(user_id=request.user.id).order_by('-created_at')[:20]
-		for item in notifications:
-			if not item.is_read:
-				item.is_read = True
-				item.save(update_fields=['is_read'])
+		Notification.objects.filter(user_id=request.user.id, is_read=False).update(is_read=True)
 		serializer = NotificationSerializer(notifications, many=True)
 		return Response(serializer.data)
 
@@ -601,8 +662,8 @@ class UnreadCountView(APIView):
 	permission_classes = [permissions.IsAuthenticated]
 
 	def get(self, request):
-		notif_count = sum(1 for item in Notification.objects.filter(user_id=request.user.id) if not item.is_read)
-		msg_count = sum(1 for item in Message.objects.filter(receiver_id=request.user.id) if not item.is_read)
+		notif_count = Notification.objects.filter(user_id=request.user.id, is_read=False).count()
+		msg_count = Message.objects.filter(receiver_id=request.user.id, is_read=False).count()
 		pending_requests = FriendRequest.objects.filter(receiver_id=request.user.id, status='pending').count()
 		return Response({'notifications': notif_count, 'messages': msg_count, 'friend_requests': pending_requests})
 

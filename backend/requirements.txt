@@ -1,5 +1,6 @@
 asgiref==3.11.1
 certifi==2026.2.25
+channels==3.0.5
 charset-normalizer==3.4.7
 cloudinary==1.44.1
 Django==3.1.12
