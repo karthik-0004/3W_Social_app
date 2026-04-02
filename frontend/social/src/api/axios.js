@@ -18,7 +18,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const status = error?.response?.status
+    const requestUrl = error?.config?.url || ''
+    const skipAuthRedirect = Boolean(error?.config?.skipAuthRedirect)
+    const isAuthEndpoint = requestUrl.includes('/api/auth/login/') || requestUrl.includes('/api/auth/register/')
+
+    if (status === 401 && !skipAuthRedirect && !isAuthEndpoint) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       if (window.location.pathname !== '/login') {
@@ -30,12 +35,12 @@ api.interceptors.response.use(
 )
 
 export const registerUser = async (data) => {
-  const response = await api.post('/api/auth/register/', data)
+  const response = await api.post('/api/auth/register/', data, { skipAuthRedirect: true })
   return response.data
 }
 
 export const loginUser = async (data) => {
-  const response = await api.post('/api/auth/login/', data)
+  const response = await api.post('/api/auth/login/', data, { skipAuthRedirect: true })
   return response.data
 }
 
