@@ -1,9 +1,13 @@
 import { useEffect, useRef } from 'react'
+import { useTheme } from '@mui/material'
 
-const COLORS = ['#7C3AED', '#EC4899', '#06B6D4', '#F59E0B']
+const DARK_COLORS = ['#7C3AED', '#EC4899', '#06B6D4', '#F59E0B']
+const LIGHT_COLORS = ['#6C5CE7', '#3D2DB5', '#EC4899', '#06B6D4']
 
-export default function FloatingParticles() {
+export default function FloatingParticles({ isRouteTransitioning = false }) {
+  const theme = useTheme()
   const canvasRef = useRef(null)
+  const isLight = theme.palette.mode === 'light'
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -24,11 +28,19 @@ export default function FloatingParticles() {
       vx: (Math.random() - 0.5) * 0.35,
       vy: (Math.random() - 0.5) * 0.35,
       size: 1 + Math.random() * 2,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      alpha: 0.2 + Math.random() * 0.4,
+      color: (isLight ? LIGHT_COLORS : DARK_COLORS)[Math.floor(Math.random() * 4)],
+      alpha: isLight ? 0.4 : 0.2 + Math.random() * 0.4,
     }))
 
     let frame
+
+    if (isRouteTransitioning) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      return () => {
+        window.removeEventListener('resize', resize)
+      }
+    }
+
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -53,7 +65,7 @@ export default function FloatingParticles() {
           const dist = Math.hypot(dx, dy)
           if (dist < 100) {
             ctx.globalAlpha = 0.12 * (1 - dist / 100)
-            ctx.strokeStyle = '#7C3AED'
+            ctx.strokeStyle = isLight ? 'rgba(61,45,181,0.5)' : '#7C3AED'
             ctx.lineWidth = 1
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
@@ -72,7 +84,7 @@ export default function FloatingParticles() {
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', resize)
     }
-  }, [])
+  }, [isLight, isRouteTransitioning])
 
   return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }} />
 }

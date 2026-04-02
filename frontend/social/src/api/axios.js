@@ -152,8 +152,22 @@ export const getConversation = async (userId) => {
   return response.data
 }
 
-export const sendMessage = async (userId, text) => {
-  const response = await api.post(`/api/chat/${userId}/`, { text })
+export const sendMessage = async (userId, formData) => {
+  const response = await api.post(`/api/chat/${userId}/`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data
+}
+
+export const reactToMessage = async (messageId, emoji) => {
+  const response = await api.post(`/api/messages/${messageId}/react/`, { emoji })
+  return response.data
+}
+
+export const deleteMessage = async (messageId) => {
+  const response = await api.delete(`/api/messages/${messageId}/delete/`)
   return response.data
 }
 
@@ -193,6 +207,11 @@ export const getMyVibes = async () => {
 
 export const deleteVibe = async (vibeId) => {
   const response = await api.delete(`/api/vibes/${vibeId}/delete/`)
+  return response.data
+}
+
+export const reactToVibe = async (vibeId, emoji) => {
+  const response = await api.post(`/api/vibes/${vibeId}/react/`, { emoji })
   return response.data
 }
 

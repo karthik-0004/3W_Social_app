@@ -14,12 +14,14 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
+  useTheme,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { getUnreadCount } from '../api/axios'
 import { useAuth } from '../context/AuthContext'
+import ThemeToggle from './ThemeToggle'
 
 const SidebarMotion = motion(Box)
 const ItemMotion = motion(ListItem)
@@ -32,6 +34,8 @@ const getNavItems = (userId) => [
 ]
 
 export default function Sidebar() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -70,9 +74,9 @@ export default function Sidebar() {
         position: 'fixed',
         left: 0,
         top: 0,
-        background: 'rgba(8,12,20,0.75)',
-        backdropFilter: 'blur(28px)',
-        borderRight: '1px solid rgba(124,58,237,0.15)',
+        background: isLight ? '#FFFFFF' : 'rgba(8,12,20,0.75)',
+        backdropFilter: isLight ? 'none' : 'blur(28px)',
+        borderRight: isLight ? '1px solid #E8E6FF' : '1px solid rgba(124,58,237,0.15)',
         display: 'flex',
         flexDirection: 'column',
         p: 3,
@@ -84,7 +88,9 @@ export default function Sidebar() {
           variant="h5"
           sx={{
             fontWeight: 800,
-            background: 'linear-gradient(90deg, #7C3AED, #EC4899, #06B6D4, #7C3AED)',
+            background: isLight
+              ? 'linear-gradient(135deg, #3D2DB5, #6C5CE7)'
+              : 'linear-gradient(90deg, #7C3AED, #EC4899, #06B6D4, #7C3AED)',
             backgroundSize: '200% 100%',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -98,7 +104,7 @@ export default function Sidebar() {
         >
           W3 Social
         </Typography>
-        <Typography variant="caption" sx={{ color: '#94A3B8' }}>
+        <Typography variant="caption" sx={{ color: isLight ? '#6B6B8A' : '#94A3B8' }}>
           Premium social space
         </Typography>
       </Box>
@@ -123,10 +129,16 @@ export default function Sidebar() {
                 cursor: 'pointer',
                 overflow: 'hidden',
                 background: isActive
-                  ? 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.12))'
+                  ? isLight
+                    ? '#EEF0FF'
+                    : 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.12))'
                   : 'transparent',
-                border: isActive ? '1px solid rgba(124,58,237,0.25)' : '1px solid transparent',
-                '&:hover': { background: 'rgba(124,58,237,0.1)' },
+                border: isActive
+                  ? isLight
+                    ? '1px solid #DDD9FF'
+                    : '1px solid rgba(124,58,237,0.25)'
+                  : '1px solid transparent',
+                '&:hover': { background: isLight ? '#EEF0FF' : 'rgba(124,58,237,0.1)' },
                 transition: 'all 0.2s',
                 position: 'relative',
               }}
@@ -140,14 +152,14 @@ export default function Sidebar() {
                     left: 0,
                     top: 6,
                     bottom: 6,
-                    width: 4,
+                    width: isLight ? 3 : 4,
                     borderRadius: 8,
-                    background: 'linear-gradient(180deg, #7C3AED, #EC4899)',
+                    background: isLight ? '#3D2DB5' : 'linear-gradient(180deg, #7C3AED, #EC4899)',
                   }}
                 />
               )}
 
-              <ListItemIcon sx={{ minWidth: 40, color: isActive ? '#C4B5FD' : '#94A3B8' }}>
+              <ListItemIcon sx={{ minWidth: 40, color: isActive ? (isLight ? '#3D2DB5' : '#C4B5FD') : isLight ? '#6B6B8A' : '#94A3B8' }}>
                 <Badge badgeContent={badge} color="error" max={9}>
                   <Box sx={{ position: 'relative' }}>
                     {item.icon}
@@ -177,7 +189,7 @@ export default function Sidebar() {
                 primary={item.label}
                 primaryTypographyProps={{
                   fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#F8FAFC' : '#94A3B8',
+                  color: isActive ? (isLight ? '#1A1035' : '#F8FAFC') : isLight ? '#6B6B8A' : '#94A3B8',
                   fontSize: '0.95rem',
                 }}
               />
@@ -186,23 +198,42 @@ export default function Sidebar() {
         })}
       </List>
 
-      <Divider sx={{ borderColor: 'rgba(124,58,237,0.14)', my: 2 }} />
+      <Divider sx={{ borderColor: isLight ? '#E8E6FF' : 'rgba(124,58,237,0.14)', my: 2 }} />
+
+      <Box sx={{ mb: 1.4, display: 'flex', justifyContent: 'center' }}>
+        <ThemeToggle />
+      </Box>
 
       <Box
-        sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', mb: 1 }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          cursor: 'pointer',
+          mb: 1,
+          pt: 1.2,
+          borderTop: isLight ? '1px solid #E8E6FF' : '1px solid rgba(124,58,237,0.14)',
+          borderRadius: 2,
+          px: 1,
+          pb: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: isLight ? 'rgba(61,45,181,0.06)' : 'rgba(124,58,237,0.12)',
+          },
+        }}
         onClick={() => navigate(`/profile/${user?.id}`)}
       >
-        <Box sx={{ p: '2px', borderRadius: '50%', transition: 'all 0.25s ease', '&:hover': { boxShadow: 'var(--glow-purple)' } }}>
-          <Avatar sx={{ width: 40, height: 40, bgcolor: '#7C3AED', fontWeight: 700, fontSize: '1rem' }}>
+        <Box sx={{ p: '2px', borderRadius: '50%', transition: 'all 0.2s ease', '&:hover': { boxShadow: 'var(--glow-purple)' } }}>
+          <Avatar src={user?.profile_pic || ''} sx={{ width: 40, height: 40, bgcolor: isLight ? '#3D2DB5' : '#7C3AED', fontWeight: 700, fontSize: '1rem' }}>
             {user?.username?.[0]?.toUpperCase()}
           </Avatar>
         </Box>
 
         <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#F8FAFC' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: isLight ? '#1A1035' : '#F8FAFC' }}>
             {user?.username}
           </Typography>
-          <Typography variant="caption" sx={{ color: '#94A3B8' }}>
+          <Typography variant="caption" sx={{ color: isLight ? '#6B6B8A' : '#94A3B8' }}>
             View profile
           </Typography>
         </Box>
@@ -212,10 +243,11 @@ export default function Sidebar() {
             logout()
           }}
           sx={{
-            color: '#94A3B8',
+            color: isLight ? '#6B6B8A' : '#94A3B8',
             cursor: 'pointer',
-            '&:hover': { color: '#EC4899' },
+            '&:hover': { color: '#FF6B6B', bgcolor: 'rgba(255,107,107,0.1)', borderRadius: 999 },
             display: 'flex',
+            transition: 'all 0.2s ease',
           }}
         >
           <LogoutRoundedIcon fontSize="small" />

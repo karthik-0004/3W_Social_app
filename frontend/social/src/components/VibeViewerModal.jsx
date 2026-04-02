@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import RemoveRedEyeRoundedIcon from '@mui/icons-material/RemoveRedEyeRounded'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -12,9 +13,10 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { viewVibe } from '../api/axios'
+import { reactToVibe, viewVibe } from '../api/axios'
 
 const VIBE_DURATION_MS = 5000
+const REACTION_EMOJIS = ['❤️', '🔥', '😮', '😂', '😍', '👏', '💯', '🥺']
 
 export default function VibeViewerModal({
   open,
@@ -22,21 +24,24 @@ export default function VibeViewerModal({
   vibeGroup,
   currentUserId,
 }) {
-  const vibes = useMemo(() => vibeGroup?.vibes || [], [vibeGroup])
+  const propVibes = useMemo(() => vibeGroup?.vibes || [], [vibeGroup])
+  const [vibes, setVibes] = useState([])
   const [index, setIndex] = useState(0)
   const [progressSeed, setProgressSeed] = useState(0)
   const [direction, setDirection] = useState(1)
   const [floatingEmoji, setFloatingEmoji] = useState(null)
   const touchStartX = useRef(null)
+  const floatingIdRef = useRef(0)
 
   const currentVibe = vibes[index]
   const isOwnVibe = String(vibeGroup?.user?.id) === String(currentUserId)
 
   useEffect(() => {
     if (!open) return
+    setVibes(propVibes)
     setIndex(0)
     setProgressSeed((value) => value + 1)
-  }, [open, vibeGroup?.user?.id])
+  }, [open, vibeGroup?.user?.id, propVibes])
 
   useEffect(() => {
     if (!open || !currentVibe) return
@@ -74,10 +79,26 @@ export default function VibeViewerModal({
     }
   }
 
-  const reactWithEmoji = (emoji) => {
-    setFloatingEmoji({ id: Date.now(), emoji })
-    window.setTimeout(() => setFloatingEmoji(null), 900)
+  const reactWithEmoji = async (emoji) => {
+    if (!currentVibe?.id) return
+
+    floatingIdRef.current += 1
+    setFloatingEmoji({ id: floatingIdRef.current, emoji })
+    window.setTimeout(() => setFloatingEmoji(null), 820)
+
+    try {
+      const updated = await reactToVibe(currentVibe.id, emoji)
+      if (!updated) return
+      const next = [...vibes]
+      next[index] = { ...next[index], ...updated }
+      setVibes(next)
+      setProgressSeed((value) => value + 1)
+    } catch {
+      // Reaction failures should not interrupt playback.
+    }
   }
+
+  const totalReactions = currentVibe?.total_reactions || 0
 
   const onTouchStart = (event) => {
     touchStartX.current = event.changedTouches?.[0]?.clientX ?? null
@@ -288,21 +309,71 @@ export default function VibeViewerModal({
 
         <Stack
           direction="row"
-          spacing={1}
-          sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 4, bgcolor: 'rgba(0,0,0,0.35)', borderRadius: 999, p: 0.6 }}
+          spacing={0.9}
+          sx={{
+            position: 'absolute',
+            bottom: 12,
+            left: 12,
+            zIndex: 4,
+            bgcolor: 'rgba(0,0,0,0.38)',
+            borderRadius: 999,
+            p: 0.7,
+            flexWrap: 'wrap',
+            maxWidth: 'calc(100% - 24px)',
+          }}
         >
-          {['❤️', '🔥', '😂', '😍', '👏', '😮'].map((emoji) => (
-            <Box
-              key={emoji}
-              component={motion.div}
-              whileHover={{ y: -8, scale: 1.3 }}
-              sx={{ cursor: 'pointer', fontSize: 20 }}
-              onClick={() => reactWithEmoji(emoji)}
-            >
-              {emoji}
-            </Box>
-          ))}
+          {REACTION_EMOJIS.map((emoji) => {
+            const current = (currentVibe?.reaction_summary || []).find((item) => item.emoji === emoji)
+            return (
+              <Box key={emoji} sx={{ textAlign: 'center' }}>
+                <Box
+                  component={motion.div}
+                  whileHover={{ y: -8, scale: 1.3 }}
+                  sx={{
+                    cursor: 'pointer',
+                    fontSize: 21,
+                    width: 34,
+                    height: 34,
+                    display: 'grid',
+                    placeItems: 'center',
+                    borderRadius: '50%',
+                    border: current?.reacted ? '1px solid rgba(236,72,153,0.9)' : '1px solid transparent',
+                    boxShadow: current?.reacted ? '0 0 18px rgba(236,72,153,0.6)' : 'none',
+                    background: current?.reacted ? 'linear-gradient(135deg, rgba(124,58,237,0.38), rgba(236,72,153,0.32))' : 'transparent',
+                  }}
+                  onClick={() => reactWithEmoji(emoji)}
+                >
+                  {emoji}
+                </Box>
+                {current?.count > 0 && (
+                  <Typography variant="caption" sx={{ color: '#E2E8F0', fontSize: 11 }}>
+                    {current.count}
+                  </Typography>
+                )}
+              </Box>
+            )
+          })}
         </Stack>
+
+        {isOwnVibe && totalReactions > 0 && (
+          <Typography
+            sx={{
+              position: 'absolute',
+              left: '50%',
+              bottom: 70,
+              transform: 'translateX(-50%)',
+              color: '#E2E8F0',
+              bgcolor: 'rgba(0,0,0,0.38)',
+              px: 1.3,
+              py: 0.4,
+              borderRadius: 999,
+              zIndex: 4,
+              fontSize: 12,
+            }}
+          >
+            {totalReactions} people reacted
+          </Typography>
+        )}
 
         <AnimatePresence>
           {floatingEmoji && (
@@ -310,7 +381,7 @@ export default function VibeViewerModal({
               component={motion.div}
               key={floatingEmoji.id}
               initial={{ y: 0, opacity: 1, scale: 1 }}
-              animate={{ y: -400, opacity: 0, scale: 2 }}
+              animate={{ y: -500, opacity: 0, scale: 2 }}
               exit={{ opacity: 0 }}
               sx={{ position: 'absolute', left: '50%', bottom: 70, transform: 'translateX(-50%)', fontSize: 30, zIndex: 5 }}
             >

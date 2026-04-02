@@ -3,16 +3,21 @@ import {
   CardContent,
   Skeleton,
   Stack,
+  useTheme,
 } from '@mui/material'
 
 function PostSkeletonItem() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
+
   return (
     <Card
       sx={{
         borderRadius: 3,
         '& .MuiSkeleton-root': {
-          background:
-            'linear-gradient(90deg, #0F1623 25%, #161E2E 50%, #0F1623 75%)',
+          background: isLight
+            ? 'linear-gradient(90deg, #E8E6FF 25%, #F0EFFF 50%, #E8E6FF 75%)'
+            : 'linear-gradient(90deg, #0F1623 25%, #161E2E 50%, #0F1623 75%)',
           backgroundSize: '800px 100%',
           animation: 'shimmer 1.8s linear infinite',
         },

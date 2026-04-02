@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
 import useLocalStorage from '../hooks/useLocalStorage'
 
@@ -8,23 +9,23 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useLocalStorage('user', null)
   const [token, setTokenState] = useState(() => localStorage.getItem('token'))
 
-  const login = (userData, authToken) => {
+  const login = useCallback((userData, authToken) => {
     setUser(userData)
     setTokenState(authToken)
     localStorage.setItem('token', authToken)
-  }
+  }, [setUser])
 
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setUser(userData)
-  }
+  }, [setUser])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null)
     setTokenState(null)
     localStorage.removeItem('user')
     localStorage.removeItem('token')
     window.location.href = '/login'
-  }
+  }, [setUser])
 
   const value = useMemo(
     () => ({
@@ -35,7 +36,7 @@ export function AuthProvider({ children }) {
       logout,
       isAuthenticated: Boolean(token),
     }),
-    [user, token],
+    [user, token, login, updateUser, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

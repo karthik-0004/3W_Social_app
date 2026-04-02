@@ -15,6 +15,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material'
 import { forwardRef, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -29,11 +30,15 @@ const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />
 })
 
-function CreatePostModal({ onPostCreated }) {
-  const [open, setOpen] = useState(false)
+function CreatePostModal({ onPostCreated, open: controlledOpen, onClose, hideFab = false }) {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
+  const [internalOpen, setInternalOpen] = useState(false)
   const [content, setContent] = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const open = typeof controlledOpen === 'boolean' ? controlledOpen : internalOpen
 
   const previewUrl = useMemo(() => {
     if (!imageFile) return null
@@ -52,7 +57,11 @@ function CreatePostModal({ onPostCreated }) {
   const resetAndClose = () => {
     setContent('')
     setImageFile(null)
-    setOpen(false)
+    if (typeof controlledOpen === 'boolean') {
+      onClose?.()
+    } else {
+      setInternalOpen(false)
+    }
   }
 
   const handleFileChange = (event) => {
@@ -96,23 +105,25 @@ function CreatePostModal({ onPostCreated }) {
 
   return (
     <>
-      <Fab
-        aria-label="create post"
-        onClick={() => setOpen(true)}
-        sx={{
-          position: 'fixed',
-          right: 22,
-          bottom: 22,
-          background: 'linear-gradient(135deg, #6C63FF, #FF6584)',
-          color: '#fff',
-          zIndex: 1200,
-          '&:hover': {
-            background: 'linear-gradient(135deg, #7B73FF, #FF7692)',
-          },
-        }}
-      >
-        <AddRoundedIcon />
-      </Fab>
+      {!hideFab && (
+        <Fab
+          aria-label="create post"
+          onClick={() => setInternalOpen(true)}
+          sx={{
+            position: 'fixed',
+            right: 22,
+            bottom: 22,
+            background: 'linear-gradient(135deg, #6C63FF, #FF6584)',
+            color: '#fff',
+            zIndex: 1200,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #7B73FF, #FF7692)',
+            },
+          }}
+        >
+          <AddRoundedIcon />
+        </Fab>
+      )}
 
       <Dialog
         open={open}
@@ -123,12 +134,13 @@ function CreatePostModal({ onPostCreated }) {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            background: 'rgba(26,26,46,0.96)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: isDark ? 'rgba(26,26,46,0.96)' : '#FFFFFF',
+            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E8E6FF',
+            color: isDark ? '#F8FAFC' : '#1A1035',
           },
         }}
       >
-        <DialogTitle>Create Post</DialogTitle>
+        <DialogTitle sx={{ color: isDark ? '#F8FAFC' : '#1A1035', fontWeight: 700 }}>Create Post</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
@@ -139,6 +151,18 @@ function CreatePostModal({ onPostCreated }) {
               value={content}
               onChange={(event) => setContent(event.target.value)}
               fullWidth
+              InputProps={{
+                sx: {
+                  color: isDark ? '#F8FAFC' : '#1A1035',
+                  bgcolor: isDark ? 'rgba(15,23,42,0.55)' : '#F7F6FF',
+                },
+              }}
+              sx={{
+                '& .MuiInputBase-input::placeholder': {
+                  color: isDark ? 'rgba(241,245,249,0.78)' : '#6B6B8A',
+                  opacity: 1,
+                },
+              }}
             />
 
             <Box
@@ -149,6 +173,7 @@ function CreatePostModal({ onPostCreated }) {
                 p: 2.4,
                 textAlign: 'center',
                 cursor: 'pointer',
+                color: isDark ? '#E2E8F0' : '#1A1035',
                 '&:hover': {
                   borderColor: 'primary.main',
                   backgroundColor: 'rgba(108,99,255,0.08)',
@@ -157,7 +182,7 @@ function CreatePostModal({ onPostCreated }) {
             >
               <Stack spacing={1} alignItems="center">
                 <AddPhotoAlternateRoundedIcon />
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: isDark ? 'rgba(226,232,240,0.85)' : '#6B6B8A' }}>
                   Click to upload image (JPG/PNG/GIF/WEBP, max 5MB)
                 </Typography>
               </Stack>
@@ -189,7 +214,7 @@ function CreatePostModal({ onPostCreated }) {
             )}
 
             {imageFile && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: isDark ? 'rgba(226,232,240,0.85)' : '#6B6B8A' }}>
                 {imageFile.name}
               </Typography>
             )}

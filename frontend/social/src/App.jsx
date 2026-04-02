@@ -1,4 +1,4 @@
-import { CssBaseline, ThemeProvider } from '@mui/material'
+import { CssBaseline, ThemeProvider, useTheme as useMuiTheme } from '@mui/material'
 import { AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
@@ -7,6 +7,7 @@ import Layout from './components/Layout'
 import PageTransition from './components/PageTransition'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider as AppThemeProvider, useTheme } from './context/ThemeContext'
 import ChatConversation from './pages/ChatConversation'
 import EditProfilePage from './pages/EditProfilePage'
 import ChatPage from './pages/ChatPage'
@@ -15,13 +16,13 @@ import Login from './pages/Login'
 import NotificationsPage from './pages/NotificationsPage'
 import Register from './pages/Register'
 import UserProfilePage from './pages/UserProfilePage'
-import theme from './theme/theme'
+import { getTheme } from './theme/theme'
 
 function AppRoutes() {
   const location = useLocation()
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="sync" initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route
           path="/login"
@@ -91,26 +92,45 @@ function AppRoutes() {
   )
 }
 
-export default function App() {
+function AppShell() {
+  const { mode } = useTheme()
+  const theme = getTheme(mode)
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <BrowserRouter>
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              style: {
-                background: '#1A1A2E',
-                color: '#F1F5F9',
-                border: '1px solid rgba(167,139,250,0.3)',
-                borderRadius: '12px',
-              },
-            }}
-          />
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <AppContent />
     </ThemeProvider>
+  )
+}
+
+function AppContent() {
+  const theme = useMuiTheme()
+
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: '12px',
+            },
+          }}
+        />
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <AppThemeProvider>
+      <AppShell />
+    </AppThemeProvider>
   )
 }

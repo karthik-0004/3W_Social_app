@@ -2,7 +2,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded'
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded'
 import { motion } from 'framer-motion'
-import { Avatar, Box, IconButton, Stack, Typography } from '@mui/material'
+import { Avatar, Box, IconButton, Stack, Typography, useTheme } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext'
 import CreateVibeModal from './CreateVibeModal'
 import VibeViewerModal from './VibeViewerModal'
 
-function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
+function StoryCircle({ item, label, hasUnseen, onClick, isAdd, isLight }) {
   return (
     <Box component={motion.div} whileTap={{ scale: 0.9 }} sx={{ width: 76, flex: '0 0 auto', textAlign: 'center' }}>
       <Box
@@ -25,8 +25,10 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
           cursor: 'pointer',
           '--angle': '0deg',
           background: hasUnseen
-            ? 'conic-gradient(from var(--angle), #7C3AED, #EC4899, #06B6D4, #7C3AED)'
-            : 'rgba(148,163,184,0.6)',
+            ? 'conic-gradient(from var(--angle), #6C5CE7, #3D2DB5, #7B6FF0, #6C5CE7)'
+            : isLight
+              ? '#DDD9FF'
+              : 'rgba(148,163,184,0.6)',
           animation: hasUnseen ? 'vibeRing 2.8s linear infinite' : 'none',
           '@property --angle': {
             syntax: '"<angle>"',
@@ -45,12 +47,21 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
             width: '100%',
             height: '100%',
             borderRadius: '50%',
-            bgcolor: '#0F172A',
+            bgcolor: isLight ? '#FFFFFF' : '#0F172A',
             p: '2px',
             position: 'relative',
           }}
         >
-          <Avatar src={item?.user?.profile_pic || ''} sx={{ width: '100%', height: '100%' }}>
+          <Avatar
+            src={item?.user?.profile_pic || ''}
+            sx={{
+              width: '100%',
+              height: '100%',
+              ...(isAdd && isLight
+                ? { background: 'linear-gradient(135deg, #6C5CE7, #3D2DB5)' }
+                : {}),
+            }}
+          >
             {(item?.user?.username || 'Y').charAt(0).toUpperCase()}
           </Avatar>
           {isAdd && (
@@ -62,8 +73,8 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
-                bgcolor: '#fff',
-                color: '#0F172A',
+                bgcolor: isLight ? '#EEF0FF' : '#fff',
+                color: isLight ? '#3D2DB5' : '#0F172A',
                 display: 'grid',
                 placeItems: 'center',
                 boxShadow: '0 0 0 rgba(124,58,237,0)',
@@ -79,7 +90,7 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
           )}
         </Box>
       </Box>
-      <Typography variant="caption" sx={{ mt: 0.7, display: 'block', color: '#E2E8F0', fontWeight: 600 }}>
+      <Typography variant="caption" sx={{ mt: 0.7, display: 'block', color: isLight ? '#1A1035' : '#E2E8F0', fontWeight: 600 }}>
         {label.length > 8 ? `${label.slice(0, 8)}...` : label}
       </Typography>
     </Box>
@@ -87,6 +98,8 @@ function StoryCircle({ item, label, hasUnseen, onClick, isAdd }) {
 }
 
 export default function DailyVibeBar({ refreshSignal = 0, onRefresh }) {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const { user } = useAuth()
   const scrollRef = useRef(null)
   const [loading, setLoading] = useState(true)
@@ -141,12 +154,15 @@ export default function DailyVibeBar({ refreshSignal = 0, onRefresh }) {
           mb: 1.8,
           p: 1.4,
           borderRadius: 3,
-          border: '1px solid rgba(255,255,255,0.1)',
-          background: 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.85))',
+          border: isLight ? '1px solid #E8E6FF' : '1px solid rgba(255,255,255,0.1)',
+          borderBottom: isLight ? '1px solid #E8E6FF' : undefined,
+          background: isLight
+            ? '#FFFFFF'
+            : 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.85))',
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-          <Typography sx={{ fontWeight: 800, color: '#fff' }}>Daily Vibes</Typography>
+          <Typography sx={{ fontWeight: 800, color: isLight ? '#1A1035' : '#fff' }}>Daily Vibes</Typography>
           <Stack direction="row" spacing={0.5}>
             <IconButton size="small" onClick={() => scrollByAmount(-240)}>
               <ChevronLeftRoundedIcon />
@@ -188,6 +204,7 @@ export default function DailyVibeBar({ refreshSignal = 0, onRefresh }) {
               }
             }}
             isAdd={!ownGroup?.vibes?.length}
+            isLight={isLight}
           />
 
           {loading && (
@@ -203,6 +220,7 @@ export default function DailyVibeBar({ refreshSignal = 0, onRefresh }) {
               label={item.user.username || 'Friend'}
               hasUnseen={Boolean(item.has_unseen)}
               onClick={() => openViewer(item)}
+              isLight={isLight}
             />
           ))}
         </Box>

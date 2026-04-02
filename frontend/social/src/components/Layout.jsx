@@ -1,5 +1,6 @@
 import { Box, useMediaQuery } from '@mui/material'
-import { Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import AnimatedBackground from './AnimatedBackground'
 import MobileNav from './MobileNav'
@@ -8,10 +9,23 @@ import Sidebar from './Sidebar'
 
 export default function Layout() {
   const isMobile = useMediaQuery('(max-width:768px)')
+  const location = useLocation()
+  const [isRouteTransitioning, setIsRouteTransitioning] = useState(false)
+
+  useEffect(() => {
+    setIsRouteTransitioning(true)
+    const timer = window.setTimeout(() => {
+      setIsRouteTransitioning(false)
+    }, 260)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [location.pathname, location.search])
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AnimatedBackground />
+      <AnimatedBackground isRouteTransitioning={isRouteTransitioning} />
       {!isMobile && <Sidebar />}
       <Box
         sx={{

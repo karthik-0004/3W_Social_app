@@ -18,7 +18,6 @@ export default function useCountUp(target = 0, duration = 1000) {
       }
     }
 
-    setValue(0)
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
   }, [safeTarget, duration])

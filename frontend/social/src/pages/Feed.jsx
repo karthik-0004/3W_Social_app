@@ -5,6 +5,7 @@ import {
   Container,
   Stack,
   Typography,
+  useTheme,
 } from '@mui/material'
 import Lottie from 'lottie-react'
 import { useEffect, useState } from 'react'
@@ -21,6 +22,8 @@ import { useAuth } from '../context/AuthContext'
 const PAGE_SIZE = 10
 
 function Feed() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const { user } = useAuth()
   const [posts, setPosts] = useState([])
   const [page, setPage] = useState(1)
@@ -93,11 +96,11 @@ function Feed() {
             mb: 2.4,
             p: { xs: 2.2, md: 2.6 },
             borderRadius: 3,
-            border: '1px solid rgba(255,255,255,0.12)',
-            background: 'linear-gradient(120deg, rgba(124,58,237,0.24), rgba(236,72,153,0.18), rgba(6,182,212,0.16))',
+            border: isLight ? '1px solid #E8E6FF' : '1px solid rgba(255,255,255,0.12)',
+            background: 'linear-gradient(135deg, #3D2DB5, #6C5CE7)',
             backgroundSize: '200% 200%',
             animation: 'gradientMove 10s ease infinite',
-            backdropFilter: 'blur(12px)',
+            backdropFilter: isLight ? 'none' : 'blur(12px)',
             '@keyframes gradientMove': {
               '0%': { backgroundPosition: '0% 50%' },
               '50%': { backgroundPosition: '100% 50%' },
@@ -111,7 +114,7 @@ function Feed() {
               👋
             </Box>
           </Typography>
-          <Typography color="text.secondary" sx={{ mt: 0.4 }}>
+          <Typography sx={{ mt: 0.4, color: 'rgba(255,255,255,0.85)' }}>
             Discover what your friends are posting right now.
           </Typography>
         </Box>
@@ -125,7 +128,8 @@ function Feed() {
               textAlign: 'center',
               p: 4,
               borderRadius: 3,
-              border: '1px dashed rgba(255,255,255,0.2)',
+              border: isLight ? '1px dashed #DDD9FF' : '1px dashed rgba(255,255,255,0.2)',
+              bgcolor: isLight ? 'rgba(61,45,181,0.03)' : 'transparent',
             }}
           >
             {emptyAnimation ? (
@@ -135,7 +139,7 @@ function Feed() {
             ) : (
               <DynamicFeedRoundedIcon sx={{ fontSize: 42, color: 'primary.main', mb: 1 }} />
             )}
-            <Typography variant="h6" sx={{ color: '#fff' }}>
+            <Typography variant="h6" sx={{ color: isLight ? '#3D2DB5' : '#fff' }}>
               No posts yet. Be the first to share!
             </Typography>
           </Box>
@@ -153,7 +157,7 @@ function Feed() {
                       component={motion.div}
                       animate={{ y: [0, -12, 0] }}
                       transition={{ duration: 0.7, repeat: Infinity, delay: dot * 0.15 }}
-                      sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#C4B5FD' }}
+                      sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: isLight ? '#3D2DB5' : '#C4B5FD' }}
                     />
                   ))}
                 </Stack>

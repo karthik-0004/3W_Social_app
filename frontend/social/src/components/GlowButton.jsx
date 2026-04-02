@@ -1,5 +1,6 @@
 import { Button, CircularProgress } from '@mui/material'
 import { motion } from 'framer-motion'
+import { useTheme } from '@mui/material/styles'
 
 const MotionButton = motion(Button)
 
@@ -37,6 +38,25 @@ export default function GlowButton({
   sx,
   ...props
 }) {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
+
+  const dynamicVariantStyles = {
+    ...variantStyles,
+    secondary: {
+      color: isLight ? '#1A1035' : '#F8FAFC',
+      background: isLight
+        ? '#FFFFFF'
+        : 'linear-gradient(var(--gradient-card), var(--gradient-card)) padding-box, linear-gradient(135deg, #7C3AED, #06B6D4) border-box',
+      border: isLight ? '1px solid #DDD9FF' : '1px solid transparent',
+    },
+    ghost: {
+      color: isLight ? '#3D2DB5' : '#A5B4FC',
+      background: 'transparent',
+      border: isLight ? '1px solid #DDD9FF' : '1px solid rgba(124,58,237,0.25)',
+    },
+  }
+
   return (
     <MotionButton
       onClick={onClick}
@@ -50,7 +70,16 @@ export default function GlowButton({
         fontWeight: 700,
         overflow: 'hidden',
         position: 'relative',
-        ...variantStyles[variant],
+        ...dynamicVariantStyles[variant],
+        '&.Mui-disabled': {
+          color: 'rgba(255,255,255,0.76)',
+          background:
+            variant === 'secondary'
+              ? isLight
+                ? '#F4F3FF'
+                : 'rgba(71,85,105,0.45)'
+              : 'linear-gradient(135deg, rgba(124,58,237,0.55), rgba(236,72,153,0.55))',
+        },
         '&::after': {
           content: '""',
           position: 'absolute',

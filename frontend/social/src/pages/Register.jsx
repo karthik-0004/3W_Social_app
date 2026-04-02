@@ -1,5 +1,6 @@
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
+import confetti from 'canvas-confetti'
 import { motion } from 'framer-motion'
 import {
   Box,
@@ -10,6 +11,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -23,6 +25,8 @@ import { useAuth } from '../context/AuthContext'
 const MotionCard = motion(Card)
 
 export default function Register() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const navigate = useNavigate()
   const { login } = useAuth()
   const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '' })
@@ -50,6 +54,7 @@ export default function Register() {
         password: formData.password,
       })
       login(response.user, response.access)
+      confetti({ particleCount: 90, spread: 70, colors: ['#3D2DB5', '#6C5CE7', '#FF6B6B', '#FDCB6E'] })
       toast.success('Account created successfully!')
       navigate('/feed', { replace: true })
     } catch {
@@ -66,7 +71,16 @@ export default function Register() {
         initial={{ opacity: 0, scale: 0.9, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 110, damping: 14 }}
-        sx={{ width: '100%', maxWidth: 560, p: { xs: 1.2, md: 2 }, position: 'relative', zIndex: 1 }}
+        sx={{
+          width: '100%',
+          maxWidth: 560,
+          p: { xs: 1.2, md: 2 },
+          position: 'relative',
+          zIndex: 1,
+          background: isLight ? '#FFFFFF' : undefined,
+          border: isLight ? '1px solid #E8E6FF' : undefined,
+          boxShadow: isLight ? '0 20px 60px rgba(61,45,181,0.12)' : undefined,
+        }}
       >
         <CardContent sx={{ p: { xs: 2, md: 4 } }}>
           <Stack spacing={2.2} component="form" onSubmit={handleSubmit}>
@@ -75,7 +89,7 @@ export default function Register() {
               sx={{
                 textAlign: 'center',
                 fontWeight: 800,
-                background: 'var(--gradient-main)',
+                background: isLight ? 'linear-gradient(135deg, #3D2DB5, #6C5CE7)' : 'var(--gradient-main)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -141,6 +155,30 @@ export default function Register() {
           </Stack>
         </CardContent>
       </MotionCard>
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.1} sx={{ mt: 2.2, zIndex: 1 }}>
+        {['✦ Private profile control', '✦ Daily Vibes', '✦ Direct chat'].map((item, index) => (
+          <Box
+            key={item}
+            component={motion.div}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 + index * 0.12 }}
+            sx={{
+              px: 1.5,
+              py: 0.8,
+              borderRadius: 999,
+              border: isLight ? '1px solid #3D2DB5' : '1px solid rgba(124,58,237,0.25)',
+              bgcolor: isLight ? '#FFFFFF' : 'rgba(8,12,20,0.58)',
+              backdropFilter: isLight ? 'none' : 'blur(14px)',
+              color: isLight ? '#3D2DB5' : '#C4B5FD',
+              fontSize: 12,
+            }}
+          >
+            {item}
+          </Box>
+        ))}
+      </Stack>
     </Box>
   )
 }

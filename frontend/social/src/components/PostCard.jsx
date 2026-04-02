@@ -16,6 +16,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
@@ -28,6 +29,8 @@ import { useAuth } from '../context/AuthContext'
 import VibeViewerModal from './VibeViewerModal'
 
 function PostCard({ post, onChange }) {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [comment, setComment] = useState('')
@@ -193,14 +196,20 @@ function PostCard({ post, onChange }) {
         sx={{
           borderRadius: 3,
           borderTop: localPost.is_friend_post ? '2px solid transparent' : 'none',
-          borderImage: localPost.is_friend_post ? 'linear-gradient(135deg, #A78BFA, #F472B6) 1' : 'none',
+          borderImage: localPost.is_friend_post
+            ? isLight
+              ? 'linear-gradient(90deg, #6C5CE7, #3D2DB5) 1'
+              : 'linear-gradient(135deg, #A78BFA, #F472B6) 1'
+            : 'none',
           overflow: 'hidden',
         }}
       >
       <Box
         sx={{
           height: 2,
-          background: 'linear-gradient(90deg, #7C3AED, #EC4899, #06B6D4)',
+          background: isLight
+            ? 'linear-gradient(90deg, #6C5CE7, #3D2DB5)'
+            : 'linear-gradient(90deg, #7C3AED, #EC4899, #06B6D4)',
           backgroundSize: '200% 100%',
           animation: 'postShimmer 4s linear infinite',
           '@keyframes postShimmer': {
@@ -212,13 +221,13 @@ function PostCard({ post, onChange }) {
       <CardContent
         sx={{
           borderRadius: 2,
-          background: 'rgba(255,255,255,0.04)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.04)',
+          backdropFilter: isLight ? 'none' : 'blur(12px)',
+          border: isLight ? '1px solid #E8E6FF' : '1px solid rgba(255,255,255,0.08)',
           transition: 'transform 0.24s ease, box-shadow 0.24s ease',
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 18px 28px rgba(108,99,255,0.25)',
+            boxShadow: isLight ? '0 8px 32px rgba(61,45,181,0.15)' : '0 18px 28px rgba(108,99,255,0.25)',
           },
         }}
       >
@@ -249,12 +258,12 @@ function PostCard({ post, onChange }) {
             <Box>
               <Typography
                 variant="subtitle2"
-                sx={{ fontWeight: 700, color: '#fff', cursor: profileId ? 'pointer' : 'default' }}
+                sx={{ fontWeight: 700, color: isLight ? '#1A1035' : '#fff', cursor: profileId ? 'pointer' : 'default' }}
                 onClick={() => profileId && navigate(`/profile/${profileId}`)}
               >
                 {username}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: isLight ? '#9898B3' : 'text.secondary' }}>
                 {localPost.created_at
                   ? formatDistanceToNow(new Date(localPost.created_at), { addSuffix: true })
                   : 'just now'}
@@ -263,7 +272,7 @@ function PostCard({ post, onChange }) {
           </Stack>
 
           {localPost.content && (
-            <Typography sx={{ whiteSpace: 'pre-line', color: 'rgba(255,255,255,0.92)' }}>
+            <Typography sx={{ whiteSpace: 'pre-line', color: isLight ? '#2D2D4E' : 'rgba(255,255,255,0.92)' }}>
               {localPost.content}
             </Typography>
           )}
@@ -335,14 +344,14 @@ function PostCard({ post, onChange }) {
                   '&:hover svg': { transform: 'rotate(-10deg)' },
                 }}
               >
-                {likedByCurrentUser ? <FavoriteRoundedIcon sx={{ color: '#FF6584' }} /> : <FavoriteBorderRoundedIcon />}
+                {likedByCurrentUser ? <FavoriteRoundedIcon sx={{ color: '#FF6B6B' }} /> : <FavoriteBorderRoundedIcon />}
               </IconButton>
               {reactionEmoji && (
                 <Chip
                   size="small"
                   label={reactionEmoji}
                   onDelete={() => setReactionEmoji(null)}
-                  sx={{ ml: 0.4, background: 'rgba(255,255,255,0.08)' }}
+                  sx={{ ml: 0.4, background: isLight ? '#EEF0FF' : 'rgba(255,255,255,0.08)' }}
                 />
               )}
               <Typography variant="body2" color="text.secondary">
@@ -355,9 +364,11 @@ function PostCard({ post, onChange }) {
                 onClick={() => setCommentsOpen((prev) => !prev)}
                 sx={{
                   transition: 'all 0.2s ease',
+                  color: isLight ? '#6B6B8A' : undefined,
                   '&:hover': {
                     transform: 'scale(1.08)',
-                    boxShadow: '0 0 16px rgba(108,99,255,0.35)',
+                    color: isLight ? '#3D2DB5' : undefined,
+                    boxShadow: isLight ? '0 0 16px rgba(61,45,181,0.22)' : '0 0 16px rgba(108,99,255,0.35)',
                   },
                 }}
               >
@@ -377,7 +388,7 @@ function PostCard({ post, onChange }) {
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.24 }}
-                sx={{ overflow: 'hidden' }}
+                sx={{ overflow: 'hidden', bgcolor: isLight ? '#F7F6FF' : 'transparent', borderRadius: 2, p: isLight ? 1 : 0 }}
               >
             <Stack spacing={1.5} sx={{ pt: 0.8 }}>
               <Stack spacing={1.1} sx={{ maxHeight: 300, overflowY: 'auto', pr: 0.5 }}>
@@ -396,7 +407,7 @@ function PostCard({ post, onChange }) {
                       {(item.username || 'U').charAt(0).toUpperCase()}
                     </Avatar>
                     <Box>
-                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
+                      <Typography variant="body2" sx={{ color: isLight ? '#1A1035' : '#fff', fontWeight: 600 }}>
                         {item.username}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -426,6 +437,9 @@ function PostCard({ post, onChange }) {
                     }
                   }}
                   InputProps={{
+                    sx: {
+                      bgcolor: isLight ? '#F0EFFF' : undefined,
+                    },
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton onClick={handleComment} disabled={commenting || !comment.trim()}>

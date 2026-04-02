@@ -64,16 +64,25 @@ export default function NotificationsPage() {
   }
 
   return (
-    <Container maxWidth={false} sx={{ maxWidth: 760, py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 2.5, fontWeight: 700 }}>
+    <Container
+      maxWidth={false}
+      sx={{
+        maxWidth: 760,
+        py: 4,
+        bgcolor: '#000000',
+        borderRadius: 3,
+        border: '1px solid rgba(255,255,255,0.16)',
+      }}
+    >
+      <Typography variant="h4" sx={{ mb: 2.5, fontWeight: 700, color: '#FFFFFF' }}>
         Notifications
       </Typography>
 
       {pendingRequests.length > 0 && (
-        <Card sx={{ p: 1.2, mb: 2 }}>
+        <Card sx={{ p: 1.2, mb: 2, bgcolor: '#0F1117', border: '1px solid rgba(255,255,255,0.14)' }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 0.8, pt: 0.4, pb: 0.8 }}>
             <PersonAddAlt1RoundedIcon color="primary" fontSize="small" />
-            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 700 }}>
+            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 700, color: '#FFFFFF' }}>
               Friend Requests
             </Typography>
           </Stack>
@@ -87,13 +96,13 @@ export default function NotificationsPage() {
                 sx={{
                   p: 1.1,
                   borderRadius: 2,
-                  background: 'rgba(167,139,250,0.08)',
-                  border: '1px solid rgba(167,139,250,0.18)',
+                  background: '#161B22',
+                  border: '1px solid rgba(255,255,255,0.12)',
                 }}
               >
                 <Stack direction="row" spacing={1.2} alignItems="center" sx={{ flex: 1 }}>
-                  <Avatar>{requestItem.sender_username?.[0]?.toUpperCase()}</Avatar>
-                  <Typography variant="body2">
+                  <Avatar sx={{ bgcolor: '#2A2F37', color: '#FFFFFF' }}>{requestItem.sender_username?.[0]?.toUpperCase()}</Avatar>
+                  <Typography variant="body2" sx={{ color: '#E9EDF5' }}>
                     <Box component="span" sx={{ fontWeight: 700 }}>
                       {requestItem.sender_username}
                     </Box>{' '}
@@ -105,11 +114,16 @@ export default function NotificationsPage() {
                     size="small"
                     variant="primary"
                     onClick={() => handleAccept(requestItem)}
-                    sx={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
+                    sx={{ background: 'linear-gradient(135deg, #3D2DB5, #6C5CE7)' }}
                   >
                     Accept
                   </GlowButton>
-                  <GlowButton size="small" variant="danger" onClick={() => handleDecline(requestItem)}>
+                  <GlowButton
+                    size="small"
+                    variant="danger"
+                    onClick={() => handleDecline(requestItem)}
+                    sx={{ bgcolor: 'transparent', border: '1px solid #FF6B6B', color: '#FF6B6B' }}
+                  >
                     Decline
                   </GlowButton>
                 </Stack>
@@ -119,15 +133,15 @@ export default function NotificationsPage() {
         </Card>
       )}
 
-      <Card sx={{ p: 1.2 }}>
+      <Card sx={{ p: 1.2, bgcolor: '#0F1117', border: '1px solid rgba(255,255,255,0.14)' }}>
         {loading ? (
-          <Typography sx={{ px: 1.2, py: 2 }} color="text.secondary">
+          <Typography sx={{ px: 1.2, py: 2, color: '#A5ADBA' }}>
             Loading notifications...
           </Typography>
         ) : items.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>
-            <NotificationsNoneRoundedIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
-            <Typography sx={{ mt: 1.5 }} color="text.secondary">
+            <NotificationsNoneRoundedIcon sx={{ fontSize: 40, color: '#A5ADBA' }} />
+            <Typography sx={{ mt: 1.5, color: '#A5ADBA' }}>
               No notifications yet
             </Typography>
           </Box>
@@ -145,21 +159,24 @@ export default function NotificationsPage() {
                 sx={{
                   p: 1.1,
                   borderRadius: 2,
-                  borderLeft: item.is_read ? '3px solid transparent' : '3px solid #A78BFA',
-                  background: item.is_read ? 'rgba(255,255,255,0.02)' : 'rgba(167,139,250,0.08)',
-                  opacity: item.is_read ? 0.7 : 1,
+                  borderLeft: item.is_read ? '3px solid transparent' : '3px solid #4D7DFF',
+                  background: item.is_read ? '#181D24' : '#20262F',
+                  opacity: 1,
                   cursor: item.post ? 'pointer' : 'default',
+                  border: '1px solid rgba(255,255,255,0.12)',
                 }}
               >
-                <Avatar src={item.from_profile_pic || ''}>{item.from_username?.[0]?.toUpperCase()}</Avatar>
+                <Avatar src={item.from_profile_pic || ''} sx={{ bgcolor: '#2A2F37', color: '#FFFFFF' }}>
+                  {item.from_username?.[0]?.toUpperCase()}
+                </Avatar>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ color: '#EEF2FA' }}>
                     <Box component="span" sx={{ fontWeight: 700 }}>
                       {item.from_username}
                     </Box>{' '}
                     {textByType[item.type] || 'sent an update'}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ color: '#A5ADBA' }}>
                     {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                   </Typography>
                 </Box>

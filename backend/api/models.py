@@ -95,9 +95,19 @@ class Friendship(models.Model):
 
 
 class Message(models.Model):
+	MESSAGE_TYPE_CHOICES = [
+		('text', 'Text'),
+		('image', 'Image'),
+		('both', 'Both'),
+	]
+
 	sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
 	receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
-	text = models.TextField()
+	text = models.TextField(blank=True, default='')
+	image = models.ImageField(upload_to='chat_images/', null=True, blank=True)
+	message_type = models.CharField(max_length=10, choices=MESSAGE_TYPE_CHOICES, default='text')
+	reactions = models.JSONField(default=dict, blank=True)
+	is_deleted = models.BooleanField(default=False)
 	is_read = models.BooleanField(default=False)
 	created_at = models.DateTimeField(auto_now_add=True)
 
@@ -126,6 +136,7 @@ class DailyVibe(models.Model):
 	note = models.TextField(blank=True)
 	media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES)
 	viewers = models.JSONField(default=list, blank=True)
+	reactions = models.JSONField(default=dict, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	expires_at = models.DateTimeField(blank=True, null=True)
 

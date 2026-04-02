@@ -169,6 +169,8 @@ class DailyVibeSerializer(serializers.ModelSerializer):
     has_viewed = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username', read_only=True)
     user_profile_pic = serializers.SerializerMethodField()
+    reaction_summary = serializers.SerializerMethodField()
+    total_reactions = serializers.SerializerMethodField()
 
     class Meta:
         model = DailyVibe
@@ -186,8 +188,11 @@ class DailyVibeSerializer(serializers.ModelSerializer):
             'is_expired',
             'viewer_count',
             'has_viewed',
+            'reactions',
+            'reaction_summary',
+            'total_reactions',
         ]
-        read_only_fields = ['user', 'viewers', 'created_at', 'expires_at']
+        read_only_fields = ['user', 'viewers', 'created_at', 'expires_at', 'reactions']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -214,6 +219,27 @@ class DailyVibeSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.user.profile_pic.url)
         return None
 
+    def get_reaction_summary(self, obj):
+        request = self.context.get('request')
+        current_username = request.user.username if request and request.user.is_authenticated else None
+        summary = []
+        reactions = obj.reactions or {}
+        for emoji, users in reactions.items():
+            users = users or []
+            summary.append(
+                {
+                    'emoji': emoji,
+                    'count': len(users),
+                    'reacted': bool(current_username and current_username in users),
+                }
+            )
+        summary.sort(key=lambda item: item['count'], reverse=True)
+        return summary
+
+    def get_total_reactions(self, obj):
+        reactions = obj.reactions or {}
+        return sum(len(users or []) for users in reactions.values())
+
 
 class CommentSerializer(serializers.Serializer):
     text = serializers.CharField(max_length=1000)
@@ -222,10 +248,66 @@ class CommentSerializer(serializers.Serializer):
 class MessageSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source='sender.username', read_only=True)
     receiver_username = serializers.CharField(source='receiver.username', read_only=True)
+    sender_profile_pic = serializers.SerializerMethodField()
+    receiver_profile_pic = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+    reaction_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'sender_username', 'receiver', 'receiver_username', 'text', 'is_read', 'created_at']
+        fields = [
+            'id',
+            'sender',
+            'sender_username',
+            'sender_profile_pic',
+            'receiver',
+            'receiver_username',
+            'receiver_profile_pic',
+            'text',
+            'image',
+            'image_url',
+            'message_type',
+            'reactions',
+            'reaction_summary',
+            'is_deleted',
+            'is_read',
+            'created_at',
+        ]
+
+    def get_sender_profile_pic(self, obj):
+        request = self.context.get('request')
+        if request and obj.sender.profile_pic:
+            return request.build_absolute_uri(obj.sender.profile_pic.url)
+        return None
+
+    def get_receiver_profile_pic(self, obj):
+        request = self.context.get('request')
+        if request and obj.receiver.profile_pic:
+            return request.build_absolute_uri(obj.receiver.profile_pic.url)
+        return None
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if request and obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
+    def get_reaction_summary(self, obj):
+        request = self.context.get('request')
+        current_username = request.user.username if request and request.user.is_authenticated else None
+        summary = []
+        reactions = obj.reactions or {}
+        for emoji, users in reactions.items():
+            users = users or []
+            summary.append(
+                {
+                    'emoji': emoji,
+                    'count': len(users),
+                    'reacted': bool(current_username and current_username in users),
+                }
+            )
+        summary.sort(key=lambda item: item['count'], reverse=True)
+        return summary
 
 
 class NotificationSerializer(serializers.ModelSerializer):

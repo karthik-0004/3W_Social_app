@@ -5,6 +5,7 @@ from .views import (
     CancelFriendRequestView,
     ChangePasswordView,
     ConversationView,
+    DeleteMessageView,
     CommentPostView,
     CreateVibeView,
     DeleteVibeView,
@@ -20,6 +21,8 @@ from .views import (
     PostListCreateView,
     RegisterView,
     RejectFriendRequestView,
+    ReactToMessageView,
+    ReactToVibeView,
     SearchUsersView,
     SendFriendRequestView,
     UnreadCountView,
@@ -27,7 +30,6 @@ from .views import (
     UserProfileByIdView,
     ViewVibeView,
     profile_update_view,
-    UserProfileUpdateView,
     UserProfileView,
 )
 
@@ -51,6 +53,8 @@ urlpatterns = [
     path('friend-requests/<int:request_id>/reject/', RejectFriendRequestView.as_view()),
     path('friends/', FriendsListView.as_view()),
     path('chat/<int:user_id>/', ConversationView.as_view()),
+    path('messages/<int:message_id>/react/', ReactToMessageView.as_view()),
+    path('messages/<int:message_id>/delete/', DeleteMessageView.as_view()),
     path('chat/inbox/', InboxView.as_view()),
     path('notifications/', NotificationsView.as_view()),
     path('notifications/unread/', UnreadCountView.as_view()),
@@ -58,5 +62,6 @@ urlpatterns = [
     path('vibes/feed/', FeedVibesView.as_view()),
     path('vibes/mine/', MyVibesView.as_view()),
     path('vibes/<int:vibe_id>/view/', ViewVibeView.as_view()),
+    path('vibes/<int:vibe_id>/react/', ReactToVibeView.as_view()),
     path('vibes/<int:vibe_id>/delete/', DeleteVibeView.as_view()),
 ]

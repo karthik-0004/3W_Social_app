@@ -1,11 +1,11 @@
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import MessageRoundedIcon from '@mui/icons-material/MessageRounded'
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded'
+import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Avatar,
   Box,
-  Button,
   Chip,
   Container,
   Dialog,
@@ -15,8 +15,9 @@ import {
   Tab,
   Tabs,
   Typography,
+  useTheme,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInView } from 'react-intersection-observer'
@@ -30,6 +31,7 @@ import {
   sendFriendRequest,
   unfriend,
 } from '../api/axios'
+import CreatePostModal from '../components/CreatePostModal'
 import GlowButton from '../components/GlowButton'
 import PostCard from '../components/PostCard'
 import VibeViewerModal from '../components/VibeViewerModal'
@@ -43,6 +45,8 @@ const TAB_MAP = {
 }
 
 export default function UserProfilePage() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const { userId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -53,6 +57,7 @@ export default function UserProfilePage() {
   const [vibes, setVibes] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedPost, setSelectedPost] = useState(null)
+  const [postComposerOpen, setPostComposerOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerGroup, setViewerGroup] = useState(null)
 
@@ -67,7 +72,7 @@ export default function UserProfilePage() {
   const friendsCount = useCountUp(profile?.friends_count || 0, 900)
   const vibesCount = useCountUp(activeVibes.length, 900)
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getUserProfile(userId)
@@ -79,11 +84,11 @@ export default function UserProfilePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   useEffect(() => {
     loadProfile()
-  }, [userId])
+  }, [loadProfile])
 
   const updateProfileStatus = (status, requestId = null) => {
     setProfile((prev) => (prev ? { ...prev, friendship_status: status, request_id: requestId } : prev))
@@ -193,6 +198,12 @@ export default function UserProfilePage() {
     }
   }
 
+  const onPostCreated = (newPost) => {
+    setPosts((prev) => [newPost, ...prev])
+    setSearchParams({})
+    toast.success('Post created successfully!')
+  }
+
   const renderActions = () => {
     const status = profile?.friendship_status || 'none'
 
@@ -248,7 +259,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <Container maxWidth={false} sx={{ maxWidth: 980, py: 3 }}>
+    <Container maxWidth={false} sx={{ maxWidth: 980, py: 3, bgcolor: isLight ? '#F0EFFF' : 'transparent', borderRadius: 3 }}>
       {loading ? (
         <Stack spacing={2}>
           <Skeleton variant="rounded" height={140} />
@@ -263,47 +274,67 @@ export default function UserProfilePage() {
             transition={{ duration: 0.35 }}
             direction={{ xs: 'column', md: 'row' }}
             spacing={3}
-            sx={{ mb: 2.2, willChange: 'transform' }}
+            sx={{
+              mb: 2.2,
+              willChange: 'transform',
+              p: 2,
+              borderRadius: 3,
+              bgcolor: isLight ? '#FFFFFF' : 'transparent',
+              border: isLight ? '1px solid #E8E6FF' : 'none',
+            }}
           >
             <Box
               onClick={() => hasActiveVibes && openVibeViewer()}
               sx={{
                 p: hasActiveVibes ? '3px' : 0,
                 borderRadius: '50%',
-                width: 'fit-content',
+                width: 96,
+                height: 96,
+                minWidth: 96,
+                minHeight: 96,
+                display: 'grid',
+                placeItems: 'center',
+                overflow: 'hidden',
+                flexShrink: 0,
+                '--ring-angle': '0deg',
                 background: hasActiveVibes
-                  ? 'conic-gradient(from 120deg, #A78BFA, #F472B6, #FBBF24, #A78BFA)'
+                  ? 'conic-gradient(from var(--ring-angle), #7C3AED, #EC4899, #06B6D4, #7C3AED)'
                   : 'transparent',
-                animation: hasActiveVibes ? 'profileVibeRing 3.8s linear infinite' : 'none',
+                animation: hasActiveVibes ? 'profileRingPulse 2.2s ease-in-out infinite' : 'none',
                 cursor: hasActiveVibes ? 'pointer' : 'default',
-                '@keyframes profileVibeRing': {
-                  from: { transform: 'rotate(0deg)' },
-                  to: { transform: 'rotate(360deg)' },
+                '@property --ring-angle': {
+                  syntax: '"<angle>"',
+                  inherits: false,
+                  initialValue: '0deg',
+                },
+                '@keyframes profileRingPulse': {
+                  '0%,100%': { '--ring-angle': '0deg', boxShadow: '0 0 0 rgba(124,58,237,0)' },
+                  '50%': { '--ring-angle': '180deg', boxShadow: '0 0 18px rgba(124,58,237,0.6)' },
                 },
               }}
             >
-              <Avatar src={profile?.profile_pic || ''} sx={{ width: 90, height: 90 }}>
+              <Avatar src={profile?.profile_pic || ''} sx={{ width: '100%', height: '100%' }}>
                 {profile?.username?.[0]?.toUpperCase()}
               </Avatar>
             </Box>
 
             <Box sx={{ flex: 1 }}>
               <Stack direction="row" spacing={3} sx={{ mb: 1.2 }}>
-                <Typography><strong>{postsCount}</strong> Posts</Typography>
-                <Typography><strong>{friendsCount}</strong> Friends</Typography>
-                <Typography><strong>{vibesCount}</strong> Vibes</Typography>
+                <Typography sx={{ color: isLight ? '#6B6B8A' : undefined }}><strong style={{ color: isLight ? '#1A1035' : undefined }}>{postsCount}</strong> Posts</Typography>
+                <Typography sx={{ color: isLight ? '#6B6B8A' : undefined }}><strong style={{ color: isLight ? '#1A1035' : undefined }}>{friendsCount}</strong> Friends</Typography>
+                <Typography sx={{ color: isLight ? '#6B6B8A' : undefined }}><strong style={{ color: isLight ? '#1A1035' : undefined }}>{vibesCount}</strong> Vibes</Typography>
               </Stack>
 
-              <Typography sx={{ fontWeight: 800, color: '#fff', mb: 0.4 }}>{profile?.username}</Typography>
+              <Typography sx={{ fontWeight: 800, color: isLight ? '#1A1035' : '#fff', mb: 0.4 }}>{profile?.username}</Typography>
               {profile?.bio && (
-                <Typography sx={{ color: 'text.secondary', mb: 1.2 }}>{profile.bio}</Typography>
+                <Typography sx={{ color: isLight ? '#6B6B8A' : 'text.secondary', mb: 1.2 }}>{profile.bio}</Typography>
               )}
 
               {renderActions()}
             </Box>
           </Stack>
 
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)', mb: 1.2 }} />
+          <Divider sx={{ borderColor: isLight ? '#E8E6FF' : 'rgba(255,255,255,0.12)', mb: 1.2 }} />
 
           <Tabs
             value={tabValue}
@@ -311,12 +342,34 @@ export default function UserProfilePage() {
               const nextTab = value === 1 ? 'vibes' : value === 2 ? 'tagged' : 'posts'
               setSearchParams(nextTab === 'posts' ? {} : { tab: nextTab })
             }}
-            sx={{ mb: 1.4 }}
+            sx={{ mb: 1.4, bgcolor: isLight ? '#FFFFFF' : 'transparent', borderRadius: 2, px: 1, border: isLight ? '1px solid #E8E6FF' : 'none' }}
           >
             <Tab label="Posts" />
             <Tab label="Vibes" />
             <Tab label="Tagged" />
           </Tabs>
+
+          {isOwnProfile && (
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              justifyContent="space-between"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              sx={{ mb: 1.4 }}
+            >
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Share something new from your profile.
+              </Typography>
+              <GlowButton
+                variant="primary"
+                icon={<AddRoundedIcon />}
+                onClick={() => setPostComposerOpen(true)}
+                sx={{ alignSelf: { xs: 'flex-start', sm: 'auto' } }}
+              >
+                Add Post
+              </GlowButton>
+            </Stack>
+          )}
 
           <AnimatePresence mode="wait">
             {tabValue === 0 && (
@@ -333,6 +386,32 @@ export default function UserProfilePage() {
                 gap: 1,
               }}
             >
+              {posts.length === 0 && (
+                <Box
+                  sx={{
+                    gridColumn: '1 / -1',
+                    border: isLight ? '1px dashed #DDD9FF' : '1px dashed rgba(255,255,255,0.2)',
+                    borderRadius: 2,
+                    p: 4,
+                    textAlign: 'center',
+                    bgcolor: isLight ? '#FFFFFF' : 'transparent',
+                  }}
+                >
+                  <Typography sx={{ color: isLight ? '#1A1035' : '#fff', fontWeight: 700, mb: 1.2 }}>
+                    No posts yet
+                  </Typography>
+                  {isOwnProfile ? (
+                    <GlowButton variant="primary" icon={<AddRoundedIcon />} onClick={() => setPostComposerOpen(true)}>
+                      Add Post
+                    </GlowButton>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      This user has not posted yet.
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
               {posts.map((post, index) => (
                 <Box
                   component={motion.div}
@@ -347,7 +426,8 @@ export default function UserProfilePage() {
                     cursor: 'pointer',
                     borderRadius: 1.5,
                     overflow: 'hidden',
-                    bgcolor: '#1E293B',
+                    bgcolor: isLight ? '#FFFFFF' : '#1E293B',
+                    border: isLight ? '1px solid #E8E6FF' : 'none',
                     '&:hover .post-overlay': { opacity: 1 },
                   }}
                 >
@@ -380,7 +460,7 @@ export default function UserProfilePage() {
                     sx={{
                       position: 'absolute',
                       inset: 0,
-                      bgcolor: 'rgba(0,0,0,0.45)',
+                      bgcolor: isLight ? 'rgba(61,45,181,0.45)' : 'rgba(0,0,0,0.45)',
                       color: '#fff',
                       opacity: 0,
                       transition: 'opacity 0.2s ease',
@@ -407,6 +487,32 @@ export default function UserProfilePage() {
                 gap: 1,
               }}
             >
+              {vibes.length === 0 && (
+                <Box
+                  sx={{
+                    gridColumn: '1 / -1',
+                    border: isLight ? '1px dashed #DDD9FF' : '1px dashed rgba(255,255,255,0.2)',
+                    borderRadius: 2,
+                    p: 4,
+                    textAlign: 'center',
+                    bgcolor: isLight ? '#FFFFFF' : 'transparent',
+                  }}
+                >
+                  <Typography sx={{ color: isLight ? '#1A1035' : '#fff', fontWeight: 700, mb: 1.2 }}>
+                    No vibes yet
+                  </Typography>
+                  {isOwnProfile ? (
+                    <GlowButton variant="primary" icon={<AddRoundedIcon />} onClick={() => setPostComposerOpen(true)}>
+                      Add Post
+                    </GlowButton>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      This user has no vibes yet.
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
               {vibes.map((vibe) => (
                 <Box
                   key={vibe.id}
@@ -417,7 +523,8 @@ export default function UserProfilePage() {
                     borderRadius: 1.5,
                     overflow: 'hidden',
                     cursor: 'pointer',
-                    bgcolor: '#111827',
+                    bgcolor: isLight ? '#FFFFFF' : '#111827',
+                    border: isLight ? '1px solid #E8E6FF' : 'none',
                   }}
                 >
                   {vibe.media_type === 'image' && vibe.media && (
@@ -485,13 +592,14 @@ export default function UserProfilePage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               sx={{
-                border: '1px dashed rgba(255,255,255,0.2)',
+                border: isLight ? '1px dashed #DDD9FF' : '1px dashed rgba(255,255,255,0.2)',
                 borderRadius: 2,
                 p: 4,
                 textAlign: 'center',
+                bgcolor: isLight ? '#FFFFFF' : 'transparent',
               }}
             >
-              <Typography sx={{ color: '#fff', fontWeight: 700 }}>Tagged posts coming soon</Typography>
+              <Typography sx={{ color: isLight ? '#1A1035' : '#fff', fontWeight: 700 }}>Tagged posts coming soon</Typography>
             </Box>
           )}
           </AnimatePresence>
@@ -513,6 +621,13 @@ export default function UserProfilePage() {
         }}
         vibeGroup={viewerGroup}
         currentUserId={user?.id}
+      />
+
+      <CreatePostModal
+        open={postComposerOpen}
+        onClose={() => setPostComposerOpen(false)}
+        onPostCreated={onPostCreated}
+        hideFab
       />
     </Container>
   )

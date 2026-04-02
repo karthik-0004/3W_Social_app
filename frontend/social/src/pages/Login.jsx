@@ -11,6 +11,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -34,6 +35,8 @@ const letterItem = {
 }
 
 export default function Login() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const navigate = useNavigate()
   const { login } = useAuth()
   const [formData, setFormData] = useState({ email: '', password: '' })
@@ -50,7 +53,11 @@ export default function Login() {
     try {
       const response = await loginUser(formData)
       login(response.user, response.access)
-      confetti({ particleCount: 80, spread: 70, colors: ['#7C3AED', '#EC4899', '#06B6D4'] })
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        colors: isLight ? ['#3D2DB5', '#6C5CE7', '#FF6B6B', '#FDCB6E'] : ['#7C3AED', '#EC4899', '#06B6D4'],
+      })
       toast.success('Welcome back!')
       navigate('/feed', { replace: true })
     } catch {
@@ -74,6 +81,9 @@ export default function Login() {
           p: { xs: 1.2, md: 2 },
           position: 'relative',
           zIndex: 1,
+          background: isLight ? '#FFFFFF' : undefined,
+          border: isLight ? '1px solid #E8E6FF' : undefined,
+          boxShadow: isLight ? '0 20px 60px rgba(61,45,181,0.12)' : undefined,
         }}
       >
         <CardContent sx={{ p: { xs: 2, md: 4 } }}>
@@ -87,7 +97,7 @@ export default function Login() {
                   variant="h3"
                   sx={{
                     fontWeight: 800,
-                    background: 'var(--gradient-main)',
+                    background: isLight ? 'linear-gradient(135deg, #3D2DB5, #6C5CE7)' : 'var(--gradient-main)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     whiteSpace: 'pre',
@@ -149,10 +159,10 @@ export default function Login() {
               px: 1.5,
               py: 0.8,
               borderRadius: 999,
-              border: '1px solid rgba(124,58,237,0.25)',
-              bgcolor: 'rgba(8,12,20,0.58)',
-              backdropFilter: 'blur(14px)',
-              color: '#C4B5FD',
+              border: isLight ? '1px solid #3D2DB5' : '1px solid rgba(124,58,237,0.25)',
+              bgcolor: isLight ? '#FFFFFF' : 'rgba(8,12,20,0.58)',
+              backdropFilter: isLight ? 'none' : 'blur(14px)',
+              color: isLight ? '#3D2DB5' : '#C4B5FD',
               fontSize: 12,
             }}
           >

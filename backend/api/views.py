@@ -27,6 +27,29 @@ from .serializers import (
 )
 
 
+def toggle_single_reaction(reaction_map, emoji, username):
+	reaction_map = dict(reaction_map or {})
+	had_same_reaction = username in (reaction_map.get(emoji) or [])
+
+	for key in list(reaction_map.keys()):
+		users = [item for item in (reaction_map.get(key) or []) if item != username]
+		if users:
+			reaction_map[key] = users
+		else:
+			reaction_map.pop(key, None)
+
+	previous_users = reaction_map.get(emoji) or []
+	if not had_same_reaction:
+		previous_users = [*previous_users, username]
+
+	if previous_users:
+		reaction_map[emoji] = previous_users
+	else:
+		reaction_map.pop(emoji, None)
+
+	return reaction_map
+
+
 def are_friends(user1, user2):
 	return Friendship.objects.filter(Q(user1_id=user1.id, user2_id=user2.id) | Q(user1_id=user2.id, user2_id=user1.id)).exists()
 
@@ -405,6 +428,7 @@ class FriendsListView(APIView):
 
 class ConversationView(APIView):
 	permission_classes = [permissions.IsAuthenticated]
+	parser_classes = [JSONParser, MultiPartParser, FormParser]
 
 	def get(self, request, user_id):
 		try:
@@ -422,7 +446,7 @@ class ConversationView(APIView):
 			if not unread_message.is_read:
 				unread_message.is_read = True
 				unread_message.save(update_fields=['is_read'])
-		serializer = MessageSerializer(messages, many=True)
+		serializer = MessageSerializer(messages, many=True, context={'request': request})
 		return Response(serializer.data)
 
 	def post(self, request, user_id):
@@ -435,11 +459,69 @@ class ConversationView(APIView):
 			return Response({'error': 'You must be friends to chat'}, status=status.HTTP_403_FORBIDDEN)
 
 		text = (request.data.get('text') or '').strip()
-		if not text:
-			return Response({'error': 'Message text required'}, status=status.HTTP_400_BAD_REQUEST)
+		image = request.FILES.get('image')
+		if not text and not image:
+			return Response({'error': 'Message text or image required'}, status=status.HTTP_400_BAD_REQUEST)
 
-		message = Message.objects.create(sender=request.user, receiver=receiver, text=text)
-		return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+		message_type = 'both' if text and image else 'image' if image else 'text'
+
+		message = Message.objects.create(
+			sender=request.user,
+			receiver=receiver,
+			text=text,
+			image=image,
+			message_type=message_type,
+			reactions={},
+		)
+		return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class ReactToMessageView(APIView):
+	permission_classes = [permissions.IsAuthenticated]
+
+	def post(self, request, message_id):
+		emoji = (request.data.get('emoji') or '').strip()
+		if not emoji:
+			return Response({'error': 'Emoji is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+		try:
+			message = Message.objects.get(id=message_id)
+		except Message.DoesNotExist:
+			return Response({'error': 'Message not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		if request.user.id not in {message.sender_id, message.receiver_id}:
+			return Response({'error': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
+
+		if message.is_deleted:
+			return Response({'error': 'Cannot react to deleted message'}, status=status.HTTP_400_BAD_REQUEST)
+
+		message.reactions = toggle_single_reaction(message.reactions, emoji, request.user.username)
+		message.save(update_fields=['reactions'])
+		return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_200_OK)
+
+
+class DeleteMessageView(APIView):
+	permission_classes = [permissions.IsAuthenticated]
+
+	def delete(self, request, message_id):
+		try:
+			message = Message.objects.get(id=message_id)
+		except Message.DoesNotExist:
+			return Response({'error': 'Message not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		if message.sender_id != request.user.id:
+			return Response({'error': 'Only sender can delete this message'}, status=status.HTTP_403_FORBIDDEN)
+
+		message.text = ''
+		if message.image:
+			message.image.delete(save=False)
+		message.image = None
+		message.message_type = 'text'
+		message.reactions = {}
+		message.is_deleted = True
+		message.save(update_fields=['text', 'image', 'message_type', 'reactions', 'is_deleted'])
+
+		return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
 class InboxView(APIView):
@@ -475,7 +557,7 @@ class InboxView(APIView):
 			result.append(
 				{
 					'user': UserPublicSerializer(each_user, context={'request': request}).data,
-					'last_message': MessageSerializer(last_msg).data if last_msg else None,
+					'last_message': MessageSerializer(last_msg, context={'request': request}).data if last_msg else None,
 					'unread_count': unread_count,
 				}
 			)
@@ -612,6 +694,28 @@ class ViewVibeView(APIView):
 			vibe.save(update_fields=['viewers'])
 
 		return Response({'status': 'viewed', 'viewer_count': len(vibe.viewers or [])}, status=status.HTTP_200_OK)
+
+
+class ReactToVibeView(APIView):
+	permission_classes = [permissions.IsAuthenticated]
+
+	def post(self, request, vibe_id):
+		emoji = (request.data.get('emoji') or '').strip()
+		if not emoji:
+			return Response({'error': 'Emoji is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+		try:
+			vibe = DailyVibe.objects.get(id=vibe_id)
+		except DailyVibe.DoesNotExist:
+			return Response({'error': 'Vibe not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		vibe.reactions = toggle_single_reaction(vibe.reactions, emoji, request.user.username)
+		vibe.save(update_fields=['reactions'])
+
+		if vibe.user_id != request.user.id:
+			Notification.objects.create(user=vibe.user, from_user=request.user, type='vibe_reaction')
+
+		return Response(DailyVibeSerializer(vibe, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
 class MyVibesView(APIView):
