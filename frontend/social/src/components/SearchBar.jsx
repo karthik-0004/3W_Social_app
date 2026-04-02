@@ -11,6 +11,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -28,6 +29,8 @@ import useDebounce from '../hooks/useDebounce'
 import GlowButton from './GlowButton'
 
 export default function SearchBar() {
+  const theme = useTheme()
+  const isLight = theme.palette.mode === 'light'
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -244,8 +247,8 @@ export default function SearchBar() {
               maxHeight: 360,
               overflowY: 'auto',
               zIndex: 1300,
-              background: 'rgba(13,17,23,0.95)',
-              border: '1px solid rgba(167,139,250,0.18)',
+              background: isLight ? '#FFFFFF' : 'rgba(13,17,23,0.95)',
+              border: isLight ? '1px solid #E8E6FF' : '1px solid rgba(167,139,250,0.18)',
               backdropFilter: 'blur(16px)',
             }}
           >

@@ -69,20 +69,18 @@ export default function NotificationsPage() {
       sx={{
         maxWidth: 760,
         py: 4,
-        bgcolor: '#000000',
         borderRadius: 3,
-        border: '1px solid rgba(255,255,255,0.16)',
       }}
     >
-      <Typography variant="h4" sx={{ mb: 2.5, fontWeight: 700, color: '#FFFFFF' }}>
+      <Typography variant="h4" sx={{ mb: 2.5, fontWeight: 700, color: 'text.primary' }}>
         Notifications
       </Typography>
 
       {pendingRequests.length > 0 && (
-        <Card sx={{ p: 1.2, mb: 2, bgcolor: '#0F1117', border: '1px solid rgba(255,255,255,0.14)' }}>
+        <Card sx={{ p: 1.2, mb: 2, bgcolor: 'background.paper', border: '1px solid rgba(255,255,255,0.14)' }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 0.8, pt: 0.4, pb: 0.8 }}>
             <PersonAddAlt1RoundedIcon color="primary" fontSize="small" />
-            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 700, color: '#FFFFFF' }}>
+            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 700, color: 'text.primary' }}>
               Friend Requests
             </Typography>
           </Stack>
@@ -96,13 +94,13 @@ export default function NotificationsPage() {
                 sx={{
                   p: 1.1,
                   borderRadius: 2,
-                  background: '#161B22',
+                  bgcolor: 'background.default',
                   border: '1px solid rgba(255,255,255,0.12)',
                 }}
               >
                 <Stack direction="row" spacing={1.2} alignItems="center" sx={{ flex: 1 }}>
                   <Avatar sx={{ bgcolor: '#2A2F37', color: '#FFFFFF' }}>{requestItem.sender_username?.[0]?.toUpperCase()}</Avatar>
-                  <Typography variant="body2" sx={{ color: '#E9EDF5' }}>
+                  <Typography variant="body2" sx={{ color: 'text.primary' }}>
                     <Box component="span" sx={{ fontWeight: 700 }}>
                       {requestItem.sender_username}
                     </Box>{' '}
@@ -133,15 +131,15 @@ export default function NotificationsPage() {
         </Card>
       )}
 
-      <Card sx={{ p: 1.2, bgcolor: '#0F1117', border: '1px solid rgba(255,255,255,0.14)' }}>
+      <Card sx={{ p: 1.2, bgcolor: 'background.paper', border: '1px solid rgba(255,255,255,0.14)' }}>
         {loading ? (
-          <Typography sx={{ px: 1.2, py: 2, color: '#A5ADBA' }}>
+          <Typography sx={{ px: 1.2, py: 2, color: 'text.secondary' }}>
             Loading notifications...
           </Typography>
         ) : items.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>
-            <NotificationsNoneRoundedIcon sx={{ fontSize: 40, color: '#A5ADBA' }} />
-            <Typography sx={{ mt: 1.5, color: '#A5ADBA' }}>
+            <NotificationsNoneRoundedIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+            <Typography sx={{ mt: 1.5, color: 'text.secondary' }}>
               No notifications yet
             </Typography>
           </Box>
@@ -160,7 +158,7 @@ export default function NotificationsPage() {
                   p: 1.1,
                   borderRadius: 2,
                   borderLeft: item.is_read ? '3px solid transparent' : '3px solid #4D7DFF',
-                  background: item.is_read ? '#181D24' : '#20262F',
+                  bgcolor: item.is_read ? 'background.default' : 'background.paper',
                   opacity: 1,
                   cursor: item.post ? 'pointer' : 'default',
                   border: '1px solid rgba(255,255,255,0.12)',
@@ -170,13 +168,13 @@ export default function NotificationsPage() {
                   {item.from_username?.[0]?.toUpperCase()}
                 </Avatar>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#EEF2FA' }}>
+                  <Typography variant="body2" sx={{ color: 'text.primary' }}>
                     <Box component="span" sx={{ fontWeight: 700 }}>
                       {item.from_username}
                     </Box>{' '}
                     {textByType[item.type] || 'sent an update'}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#A5ADBA' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                   </Typography>
                 </Box>
